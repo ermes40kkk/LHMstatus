@@ -608,6 +608,7 @@
     const commonTableOptions = {
       height: "100%",
       layout: "fitColumns",
+      nestedFieldSeparator: false,
       responsiveLayout: false,
       movableColumns: true,
       selectableRows: 1,
@@ -618,6 +619,8 @@
         tooltip: true,
       },
     };
+
+    
 
     const groupTable = new Tabulator("#groupTable", {
       ...commonTableOptions,
