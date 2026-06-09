@@ -36,65 +36,73 @@
 
     .app-shell {
       width: min(1920px, 100%);
+      height: 100vh;
       margin: 0 auto;
-      padding: 24px;
+      padding: 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      overflow: hidden;
     }
 
     .hero {
       background: linear-gradient(135deg, #ffffff 0%, #eef5ff 100%);
       border: 1px solid var(--border);
-      border-radius: 18px;
-      padding: 24px;
-      box-shadow: var(--shadow);
+      border-radius: 12px;
+      padding: 10px 12px;
+      box-shadow: 0 4px 14px rgba(23, 32, 51, 0.07);
+      flex: 0 0 auto;
     }
 
     .hero-top {
-      display: flex;
-      justify-content: space-between;
-      gap: 20px;
-      align-items: flex-start;
-      flex-wrap: wrap;
+      display: grid;
+      grid-template-columns: minmax(280px, 1fr) minmax(320px, 460px);
+      gap: 12px;
+      align-items: center;
     }
 
     h1 {
-      margin: 0 0 8px;
-      font-size: clamp(1.7rem, 2vw, 2.4rem);
+      margin: 0 0 2px;
+      font-size: clamp(1.25rem, 1.5vw, 1.65rem);
       letter-spacing: -0.03em;
     }
 
     .subtitle {
       color: var(--muted);
       margin: 0;
-      line-height: 1.5;
+      font-size: 0.82rem;
+      line-height: 1.25;
     }
 
     .upload-card {
-      min-width: min(420px, 100%);
+      min-width: 0;
       background: rgba(255, 255, 255, 0.85);
       border: 1px dashed #9db7df;
-      border-radius: 14px;
-      padding: 16px;
+      border-radius: 10px;
+      padding: 8px;
     }
 
     label.file-label {
       display: block;
       font-weight: 700;
-      margin-bottom: 10px;
+      margin-bottom: 4px;
+      font-size: 0.85rem;
     }
 
     input[type="file"] {
       width: 100%;
-      padding: 10px;
+      padding: 6px;
       border: 1px solid var(--border);
-      border-radius: 10px;
+      border-radius: 8px;
       background: #fff;
+      font-size: 0.85rem;
     }
 
     .status-message {
-      margin-top: 12px;
-      padding: 10px 12px;
-      border-radius: 10px;
-      font-size: 0.95rem;
+      margin-top: 6px;
+      padding: 6px 8px;
+      border-radius: 8px;
+      font-size: 0.85rem;
       background: #eef2f7;
       color: var(--muted);
       border: 1px solid var(--border);
@@ -112,86 +120,93 @@
       border-color: #f5c2bd;
     }
 
-    .summary-grid {
-      display: grid;
-      grid-template-columns: repeat(4, minmax(150px, 1fr));
-      gap: 14px;
-      margin-top: 20px;
-    }
-
-    .summary-card {
-      background: var(--panel);
+    .summary-bar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px 12px;
+      align-items: center;
+      margin-top: 8px;
+      padding: 6px 8px;
       border: 1px solid var(--border);
-      border-radius: 14px;
-      padding: 16px;
-    }
-
-    .summary-card span {
-      display: block;
+      border-radius: 9px;
+      background: rgba(255, 255, 255, 0.72);
       color: var(--muted);
-      font-size: 0.83rem;
-      text-transform: uppercase;
-      letter-spacing: 0.06em;
-      margin-bottom: 8px;
+      font-size: 0.88rem;
+      line-height: 1.2;
     }
 
-    .summary-card strong {
-      font-size: 1.55rem;
-      letter-spacing: -0.03em;
+    .summary-item {
+      white-space: nowrap;
+    }
+
+    .summary-item:not(:last-child)::after {
+      content: "|";
+      margin-left: 12px;
+      color: #b6c2d4;
+    }
+
+    .summary-item strong {
+      color: var(--text);
+      font-size: 0.95rem;
+      letter-spacing: -0.01em;
     }
 
     .tables-layout {
       display: grid;
-      grid-template-columns: minmax(330px, 0.8fr) minmax(430px, 1.15fr) minmax(560px, 1.65fr);
-      gap: 16px;
-      margin-top: 18px;
-      align-items: start;
+      grid-template-columns: minmax(240px, 0.55fr) minmax(430px, 1.1fr) minmax(560px, 1.65fr);
+      gap: 10px;
+      flex: 1 1 auto;
+      min-height: 0;
+      align-items: stretch;
     }
 
     .panel {
       min-width: 0;
+      min-height: 0;
       background: var(--panel);
       border: 1px solid var(--border);
-      border-radius: 18px;
-      box-shadow: var(--shadow);
+      border-radius: 12px;
+      box-shadow: 0 4px 14px rgba(23, 32, 51, 0.07);
       overflow: hidden;
+      display: flex;
+      flex-direction: column;
     }
 
     .panel-header {
-      min-height: 74px;
-      padding: 16px 16px 12px;
+      flex: 0 0 auto;
+      padding: 8px 10px;
       border-bottom: 1px solid var(--border);
       background: #fbfcff;
     }
 
     .panel-header h2 {
-      margin: 0 0 6px;
-      font-size: 1.05rem;
+      margin: 0 0 2px;
+      font-size: 0.98rem;
     }
 
     .panel-header p {
       margin: 0;
       color: var(--muted);
-      font-size: 0.9rem;
-      line-height: 1.35;
+      font-size: 0.8rem;
+      line-height: 1.2;
     }
 
     .panel-actions {
       display: flex;
-      gap: 8px;
+      gap: 6px;
       flex-wrap: wrap;
-      margin-top: 12px;
+      margin-top: 6px;
     }
 
     button {
       border: 0;
-      border-radius: 9px;
-      padding: 9px 11px;
+      border-radius: 8px;
+      padding: 6px 8px;
       cursor: pointer;
       color: #fff;
       background: var(--primary);
       font-weight: 700;
-      font-size: 0.88rem;
+      font-size: 0.78rem;
       transition: background 0.15s ease, transform 0.15s ease;
     }
 
@@ -223,7 +238,17 @@
     }
 
     .table-host {
-      padding: 12px;
+      flex: 1 1 auto;
+      min-height: 0;
+      padding: 8px;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .table-panel {
+      height: calc(100vh - 150px);
+      min-height: 320px;
+      flex: 1 1 auto;
     }
 
     .table-placeholder {
@@ -255,10 +280,11 @@
     }
 
     .hint {
-      margin-top: 10px;
+      flex: 0 0 auto;
+      margin-top: 6px;
       color: var(--muted);
-      font-size: 0.85rem;
-      line-height: 1.4;
+      font-size: 0.78rem;
+      line-height: 1.25;
     }
 
     @media (max-width: 1280px) {
@@ -266,8 +292,17 @@
         grid-template-columns: 1fr;
       }
 
-      .panel-header {
-        min-height: auto;
+      .app-shell {
+        height: auto;
+        overflow: visible;
+      }
+
+      .tables-layout {
+        min-height: 0;
+      }
+
+      .table-panel {
+        height: 520px;
       }
     }
 
@@ -277,17 +312,15 @@
       }
 
       .hero {
-        padding: 16px;
+        padding: 10px;
       }
 
-      .summary-grid {
-        grid-template-columns: 1fr 1fr;
-      }
-    }
-
-    @media (max-width: 460px) {
-      .summary-grid {
+      .hero-top {
         grid-template-columns: 1fr;
+      }
+
+      .summary-item:not(:last-child)::after {
+        display: none;
       }
     }
   </style>
@@ -298,7 +331,7 @@
       <div class="hero-top">
         <div>
           <h1 id="page-title">LHM Status Analyzer</h1>
-          <p class="subtitle">Analyse lokale XLSX-Dateien direkt im Browser: Lagergruppe → Artikel → Paletten Details.</p>
+          <p class="subtitle">Lokale Analyse von XLSX-Dateien im Browser: Lagergruppe → Artikel → Paletten</p>
         </div>
 
         <div class="upload-card">
@@ -308,59 +341,59 @@
         </div>
       </div>
 
-      <div class="summary-grid" aria-label="Riepilogo dati">
-        <div class="summary-card"><span>Totale righe lette</span><strong id="totalRows">0</strong></div>
-        <div class="summary-card"><span>Totale pallet/LHM</span><strong id="totalLhm">0</strong></div>
-        <div class="summary-card"><span>Totale gruppi magazzino</span><strong id="totalGroups">0</strong></div>
-        <div class="summary-card"><span>Articoli nel gruppo selezionato</span><strong id="selectedGroupArticles">0</strong></div>
+      <div class="summary-bar" aria-label="Datenübersicht">
+        <span class="summary-item">Zeilen: <strong id="totalRows">0</strong></span>
+        <span class="summary-item">LHM: <strong id="totalLhm">0</strong></span>
+        <span class="summary-item">Lagergruppen: <strong id="totalGroups">0</strong></span>
+        <span class="summary-item">Artikel: <strong id="selectedGroupArticles">0</strong></span>
       </div>
     </section>
 
-    <section class="tables-layout" aria-label="Tabelle di analisi">
+    <section class="tables-layout" aria-label="Analysetabellen">
       <article class="panel">
         <header class="panel-header">
           <h2>1. Lagergruppen</h2>
-          <p>Seleziona una zona per vedere gli articoli disponibili.</p>
+          <p>Lagergruppe auswählen, um Artikel anzuzeigen.</p>
         </header>
         <div class="table-host">
-          <div id="groupTable"></div>
+          <div id="groupTable" class="table-panel"></div>
         </div>
       </article>
 
       <article class="panel">
         <header class="panel-header">
           <h2>2. Artikel im Lagerbereich</h2>
-          <p>Seleziona un articolo per caricare i pallet dettagliati.</p>
+          <p>Artikel auswählen, um Paletten anzuzeigen.</p>
         </header>
         <div class="table-host">
-          <div id="articleTable"></div>
+          <div id="articleTable" class="table-panel"></div>
         </div>
       </article>
 
       <article class="panel">
         <header class="panel-header">
           <h2>3. Paletten Details</h2>
-          <p>Filtra dagli header, seleziona righe, cancella righe dalla vista o scarica la tabella filtrata.</p>
-          <div class="panel-actions" aria-label="Azioni tabella dettagli">
-            <button id="sortDetailBtn" type="button" disabled>Ordina MHD ↑ + TP-Status ↓</button>
-            <button id="resetSortBtn" type="button" class="secondary" disabled>Reset ordinamento</button>
-            <button id="downloadCsvBtn" type="button" class="secondary" disabled>Scarica dettagli CSV</button>
-            <button id="downloadXlsxBtn" type="button" class="secondary" disabled>Scarica dettagli XLSX</button>
-            <button id="deleteSelectedBtn" type="button" class="danger" disabled>Elimina righe selezionate</button>
-            <button id="restoreDetailBtn" type="button" class="secondary" disabled>Ripristina dettagli</button>
+          <p>Gefilterte Paletten des ausgewählten Artikels.</p>
+          <div class="panel-actions" aria-label="Aktionen Detailtabelle">
+            <button id="sortDetailBtn" type="button" disabled>MHD ↑ + TP-Status ↓ sortieren</button>
+            <button id="resetSortBtn" type="button" class="secondary" disabled>Sortierung zurücksetzen</button>
+            <button id="downloadCsvBtn" type="button" class="secondary" disabled>CSV herunterladen</button>
+            <button id="downloadXlsxBtn" type="button" class="secondary" disabled>XLSX herunterladen</button>
+            <button id="deleteSelectedBtn" type="button" class="danger" disabled>Ausgewählte Zeilen entfernen</button>
+            <button id="restoreDetailBtn" type="button" class="secondary" disabled>Details wiederherstellen</button>
           </div>
         </header>
         <div class="table-host">
-          <div id="detailTable"></div>
-          <div class="hint">Suggerimento: per ordinamenti multipli manuali usa gli header di Tabulator; il pulsante applica direttamente MHD crescente + TP-Status decrescente.</div>
+          <div id="detailTable" class="table-panel"></div>
+          <div class="hint">Hinweis: Für manuelle Mehrfachsortierung die Tabulator-Spaltenköpfe verwenden; die Schaltfläche sortiert direkt nach MHD aufsteigend und TP-Status absteigend.</div>
         </div>
       </article>
     </section>
   </main>
 
-  <!-- SheetJS Community Edition legge il file XLSX localmente nel browser. -->
+  <!-- SheetJS Community Edition liest die XLSX-Datei lokal im Browser. -->
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-  <!-- Tabulator gestisce tabelle interattive, filtri, sorting multiplo e download. -->
+  <!-- Tabulator verwaltet interaktive Tabellen, Filter, Mehrfachsortierung und Downloads. -->
   <script src="https://cdn.jsdelivr.net/npm/tabulator-tables@6.3.1/dist/js/tabulator.min.js"></script>
 
   <script>
@@ -400,7 +433,7 @@
       restoreDetailBtn: document.getElementById("restoreDetailBtn"),
     };
 
-    // Ricava la chiave di raggruppamento magazzino/zona dalla coordinata completa.
+    // Ermittelt die Lagergruppen-Schlüssel aus der vollständigen Koordinate.
     function getLagerGruppe(coord) {
       if (!coord) return "Unbekannt";
       const firstPart = String(coord).split("-")[0].trim();
@@ -454,7 +487,7 @@
         return toIsoDateString(parsedDate);
       }
 
-      // Se la data non è convertibile, manteniamo il valore originale leggibile.
+      // Wenn das Datum nicht konvertierbar ist, bleibt der lesbare Originalwert erhalten.
       return text;
     }
 
@@ -494,20 +527,19 @@
       });
     }
 
-    // Aggrega tutti i pallet per gruppo magazzino/zona.
+    // Aggregiert alle Paletten je Lagergruppe.
     function buildGroupSummary(data) {
       const grouped = new Map();
 
       data.forEach((row) => {
         const key = row.lagerGruppe || "Unbekannt";
         if (!grouped.has(key)) {
-          grouped.set(key, { lagerGruppe: key, lhmSet: new Set(), artikelSet: new Set(), mengeTotal: 0 });
+          grouped.set(key, { lagerGruppe: key, lhmSet: new Set(), artikelSet: new Set() });
         }
 
         const group = grouped.get(key);
         if (row["LHM-Nr."]) group.lhmSet.add(String(row["LHM-Nr."]));
         if (row["Artikel-Nr."]) group.artikelSet.add(String(row["Artikel-Nr."]));
-        group.mengeTotal += parseNumber(row["Menge [VE]"]);
       });
 
       return Array.from(grouped.values())
@@ -515,12 +547,11 @@
           lagerGruppe: group.lagerGruppe,
           anzahlLhm: group.lhmSet.size,
           anzahlArtikel: group.artikelSet.size,
-          mengeGesamt: group.mengeTotal,
         }))
         .sort((a, b) => a.lagerGruppe.localeCompare(b.lagerGruppe, "de"));
     }
 
-    // Aggrega gli articoli del gruppo selezionato e calcola min/max MHD.
+    // Aggregiert die Artikel der ausgewählten Lagergruppe und berechnet min./max. MHD.
     function buildArticleSummary(data, selectedLagerGruppe) {
       const grouped = new Map();
       const rows = data.filter((row) => row.lagerGruppe === selectedLagerGruppe);
@@ -532,7 +563,6 @@
             "Artikel-Nr.": artikelNr,
             "Artikel-Bezeichnung": row["Artikel-Bezeichnung"] || "",
             lhmSet: new Set(),
-            mengeTotal: 0,
             mhdValues: [],
           });
         }
@@ -542,7 +572,6 @@
           article["Artikel-Bezeichnung"] = row["Artikel-Bezeichnung"];
         }
         if (row["LHM-Nr."]) article.lhmSet.add(String(row["LHM-Nr."]));
-        article.mengeTotal += parseNumber(row["Menge [VE]"]);
         if (row.MHD) article.mhdValues.push(row.MHD);
       });
 
@@ -553,7 +582,6 @@
             "Artikel-Nr.": article["Artikel-Nr."],
             "Artikel-Bezeichnung": article["Artikel-Bezeichnung"],
             anzahlLhm: article.lhmSet.size,
-            mengeGesamt: article.mengeTotal,
             mhdMin: sortedMhd[0] || "",
             mhdMax: sortedMhd[sortedMhd.length - 1] || "",
           };
@@ -561,7 +589,7 @@
         .sort((a, b) => String(a["Artikel-Nr."]).localeCompare(String(b["Artikel-Nr."]), "de"));
     }
 
-    // Restituisce i pallet dell'articolo selezionato nello stesso gruppo magazzino.
+    // Liefert die Paletten des ausgewählten Artikels in derselben Lagergruppe.
     function buildDetailRows(data, selectedLagerGruppe, selectedArtikelNr) {
       return data
         .filter((row) => row.lagerGruppe === selectedLagerGruppe && String(row["Artikel-Nr."]) === String(selectedArtikelNr))
@@ -578,9 +606,9 @@
     }
 
     const commonTableOptions = {
-      height: 560,
+      height: "100%",
       layout: "fitColumns",
-      responsiveLayout: "collapse",
+      responsiveLayout: false,
       movableColumns: true,
       selectableRows: 1,
       placeholder: "Bitte XLSX-Datei laden, um die Tabellen zu erzeugen.",
@@ -596,10 +624,9 @@
       index: "lagerGruppe",
       initialSort: [{ column: "lagerGruppe", dir: "asc" }],
       columns: [
-        { title: "Magazzino/Zona", field: "lagerGruppe", headerFilter: "input", minWidth: 130 },
-        { title: "Anzahl LHM", field: "anzahlLhm", sorter: "number", hozAlign: "right", width: 115 },
-        { title: "Anzahl Artikel", field: "anzahlArtikel", sorter: "number", hozAlign: "right", width: 125 },
-        { title: "Menge Gesamt [VE]", field: "mengeGesamt", sorter: "number", hozAlign: "right", formatter: (cell) => formatQuantity(cell.getValue()), minWidth: 145 },
+        { title: "Lager", field: "lagerGruppe", headerFilter: "input", minWidth: 110 },
+        { title: "LHM", field: "anzahlLhm", sorter: "number", hozAlign: "right", width: 78 },
+        { title: "Artikel", field: "anzahlArtikel", sorter: "number", hozAlign: "right", width: 86 },
       ],
     });
 
@@ -608,9 +635,8 @@
       index: "Artikel-Nr.",
       columns: [
         { title: "Artikel-Nr.", field: "Artikel-Nr.", headerFilter: "input", minWidth: 130 },
-        { title: "Artikel-Bezeichnung", field: "Artikel-Bezeichnung", headerFilter: "input", minWidth: 210 },
-        { title: "Anzahl LHM", field: "anzahlLhm", sorter: "number", hozAlign: "right", width: 115 },
-        { title: "Menge Gesamt [VE]", field: "mengeGesamt", sorter: "number", hozAlign: "right", formatter: (cell) => formatQuantity(cell.getValue()), minWidth: 145 },
+        { title: "Artikelbezeichnung", field: "Artikel-Bezeichnung", headerFilter: "input", minWidth: 210 },
+        { title: "LHM", field: "anzahlLhm", sorter: "number", hozAlign: "right", width: 80 },
         { title: "MHD Min", field: "mhdMin", headerFilter: "input", minWidth: 115 },
         { title: "MHD Max", field: "mhdMax", headerFilter: "input", minWidth: 115 },
       ],
@@ -620,7 +646,7 @@
       ...commonTableOptions,
       index: "__rowId",
       selectableRows: true,
-      placeholder: "Wähle zuerst Lagergruppe und Artikel aus.",
+      placeholder: "Bitte zuerst Lagergruppe und Artikel auswählen.",
       columns: [
         { formatter: "rowSelection", titleFormatter: "rowSelection", hozAlign: "center", headerSort: false, width: 48 },
         { title: "LHM-Nr.", field: "LHM-Nr.", headerFilter: "input", minWidth: 130 },
@@ -645,7 +671,7 @@
       state.currentDetailRows = [];
       updateSummary(articleRows.length);
       updateDetailButtons(false);
-      setStatus(`Lagergruppe ${state.selectedLagerGruppe} selezionata: ${articleRows.length} articoli.`, "success");
+      setStatus(`Lagergruppe ${state.selectedLagerGruppe} ausgewählt: ${articleRows.length} Artikel.`, "success");
     });
 
     articleTable.on("rowClick", (event, row) => {
@@ -656,7 +682,7 @@
       state.currentDetailRows = buildDetailRows(state.allRows, state.selectedLagerGruppe, state.selectedArtikelNr);
       detailTable.setData(state.currentDetailRows);
       updateDetailButtons(state.currentDetailRows.length > 0);
-      setStatus(`Articolo ${state.selectedArtikelNr} selezionato: ${state.currentDetailRows.length} pallet in dettaglio.`, "success");
+      setStatus(`Artikel ${state.selectedArtikelNr} ausgewählt: ${state.currentDetailRows.length} Paletten im Detail.`, "success");
     });
 
     detailTable.on("rowSelectionChanged", (data) => {
@@ -687,7 +713,7 @@
     elements.deleteSelectedBtn.addEventListener("click", () => {
       detailTable.getSelectedRows().forEach((row) => row.delete());
       elements.deleteSelectedBtn.disabled = true;
-      setStatus("Righe selezionate eliminate dalla Tabella 3. Usa Ripristina dettagli per ricaricarle dalla selezione corrente.", "success");
+      setStatus("Ausgewählte Zeilen aus Tabelle 3 entfernt. Details wiederherstellen lädt sie aus der aktuellen Auswahl erneut.", "success");
     });
 
     elements.restoreDetailBtn.addEventListener("click", () => {
@@ -695,7 +721,7 @@
       state.currentDetailRows = buildDetailRows(state.allRows, state.selectedLagerGruppe, state.selectedArtikelNr);
       detailTable.setData(state.currentDetailRows);
       updateDetailButtons(state.currentDetailRows.length > 0);
-      setStatus("Dettagli ripristinati dalla selezione corrente.", "success");
+      setStatus("Details aus der aktuellen Auswahl wiederhergestellt.", "success");
     });
 
     async function handleFileUpload(event) {
@@ -703,7 +729,7 @@
       if (!file) return;
 
       if (!file.name.toLowerCase().endsWith(".xlsx")) {
-        setStatus("Errore: seleziona un file Excel con estensione .xlsx.", "error");
+        setStatus("Fehler: Bitte eine Excel-Datei mit der Endung .xlsx auswählen.", "error");
         return;
       }
 
@@ -714,7 +740,7 @@
         const firstSheetName = workbook.SheetNames[0];
 
         if (!firstSheetName) {
-          throw new Error("Il file Excel non contiene fogli leggibili.");
+          throw new Error("Die Excel-Datei enthält keine lesbaren Tabellenblätter.");
         }
 
         const worksheet = workbook.Sheets[firstSheetName];
@@ -723,7 +749,7 @@
         const missingColumns = validateRequiredColumns(rowsWithNormalizedKeys);
 
         if (missingColumns.length > 0) {
-          throw new Error(`Colonne obbligatorie mancanti: ${missingColumns.join(", ")}`);
+          throw new Error(`Pflichtspalten fehlen: ${missingColumns.join(", ")}`);
         }
 
         state.allRows = normalizeDataRows(rowsWithNormalizedKeys);
@@ -737,10 +763,10 @@
         detailTable.clearData();
         updateSummary(0);
         updateDetailButtons(false);
-        setStatus(`File caricato correttamente: ${state.allRows.length} righe lette dal foglio "${firstSheetName}".`, "success");
+        setStatus(`Datei erfolgreich geladen. ${state.allRows.length.toLocaleString("de-DE")} Zeilen aus Tabellenblatt "${firstSheetName}" gelesen.`, "success");
       } catch (error) {
         resetAllTables();
-        setStatus(error.message || "Errore sconosciuto durante la lettura del file.", "error");
+        setStatus(error.message || "Unbekannter Fehler beim Lesen der Datei.", "error");
       }
     }
 
