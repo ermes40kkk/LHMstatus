@@ -38,74 +38,89 @@
       width: min(1920px, 100%);
       height: 100vh;
       margin: 0 auto;
-      padding: 10px;
+      padding: 6px;
       display: flex;
       flex-direction: column;
-      gap: 10px;
+      gap: 6px;
       overflow: hidden;
     }
 
     .hero {
       background: linear-gradient(135deg, #ffffff 0%, #eef5ff 100%);
       border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 10px 12px;
-      box-shadow: 0 4px 14px rgba(23, 32, 51, 0.07);
+      border-radius: 10px;
+      padding: 4px 7px;
+      box-shadow: 0 2px 8px rgba(23, 32, 51, 0.06);
       flex: 0 0 auto;
+      display: grid;
+      grid-template-rows: auto auto auto;
+      gap: 4px;
     }
 
     .hero-top {
       display: grid;
-      grid-template-columns: minmax(280px, 1fr) minmax(320px, 460px);
-      gap: 12px;
+      grid-template-columns: minmax(240px, 1fr) minmax(300px, 430px);
+      gap: 8px;
       align-items: center;
     }
 
     h1 {
-      margin: 0 0 2px;
-      font-size: clamp(1.25rem, 1.5vw, 1.65rem);
+      margin: 0;
+      font-size: clamp(1.05rem, 1.25vw, 1.35rem);
+      line-height: 1.05;
       letter-spacing: -0.03em;
     }
 
     .subtitle {
       color: var(--muted);
       margin: 0;
-      font-size: 0.82rem;
-      line-height: 1.25;
+      font-size: 0.76rem;
+      line-height: 1.1;
     }
 
     .upload-card {
       min-width: 0;
       background: rgba(255, 255, 255, 0.85);
       border: 1px dashed #9db7df;
-      border-radius: 10px;
-      padding: 8px;
+      border-radius: 8px;
+      padding: 4px 6px;
+      display: grid;
+      grid-template-columns: 140px 1fr;
+      gap: 5px;
+      align-items: center;
     }
 
     label.file-label {
       display: block;
       font-weight: 700;
-      margin-bottom: 4px;
-      font-size: 0.85rem;
+      margin: 0;
+      font-size: 0.76rem;
+      white-space: nowrap;
     }
 
     input[type="file"] {
       width: 100%;
-      padding: 6px;
+      padding: 3px 5px;
       border: 1px solid var(--border);
-      border-radius: 8px;
+      border-radius: 7px;
       background: #fff;
-      font-size: 0.85rem;
+      font-size: 0.76rem;
+      min-width: 0;
     }
 
     .status-message {
-      margin-top: 6px;
-      padding: 6px 8px;
-      border-radius: 8px;
-      font-size: 0.85rem;
+      margin: 0;
+      padding: 4px 7px;
+      border-radius: 7px;
+      font-size: 0.76rem;
+      line-height: 1.1;
       background: #eef2f7;
       color: var(--muted);
       border: 1px solid var(--border);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      grid-column: 1 / -1;
     }
 
     .status-message.success {
@@ -123,16 +138,16 @@
     .summary-bar {
       display: flex;
       flex-wrap: wrap;
-      gap: 6px 12px;
+      gap: 4px 10px;
       align-items: center;
-      margin-top: 8px;
-      padding: 6px 8px;
+      margin: 0;
+      padding: 3px 7px;
       border: 1px solid var(--border);
-      border-radius: 9px;
+      border-radius: 8px;
       background: rgba(255, 255, 255, 0.72);
       color: var(--muted);
-      font-size: 0.88rem;
-      line-height: 1.2;
+      font-size: 0.76rem;
+      line-height: 1.1;
     }
 
     .summary-item {
@@ -147,26 +162,49 @@
 
     .summary-item strong {
       color: var(--text);
-      font-size: 0.95rem;
+      font-size: 0.82rem;
       letter-spacing: -0.01em;
     }
 
     .tables-layout {
-      display: grid;
-      grid-template-columns: minmax(240px, 0.55fr) minmax(430px, 1.1fr) minmax(560px, 1.65fr);
-      gap: 10px;
+      display: flex;
+      gap: 0;
       flex: 1 1 auto;
       min-height: 0;
       align-items: stretch;
+      overflow: hidden;
+    }
+
+    .splitter {
+      flex: 0 0 8px;
+      cursor: col-resize;
+      position: relative;
+      min-height: 0;
+    }
+
+    .splitter::before {
+      content: "";
+      position: absolute;
+      top: 8px;
+      bottom: 8px;
+      left: 3px;
+      width: 2px;
+      border-radius: 2px;
+      background: #c7d4e8;
+    }
+
+    .splitter:hover::before,
+    .splitter.dragging::before {
+      background: var(--primary);
     }
 
     .panel {
-      min-width: 0;
+      min-width: 180px;
       min-height: 0;
       background: var(--panel);
       border: 1px solid var(--border);
-      border-radius: 12px;
-      box-shadow: 0 4px 14px rgba(23, 32, 51, 0.07);
+      border-radius: 10px;
+      box-shadow: 0 3px 10px rgba(23, 32, 51, 0.06);
       overflow: hidden;
       display: flex;
       flex-direction: column;
@@ -174,39 +212,39 @@
 
     .panel-header {
       flex: 0 0 auto;
-      padding: 8px 10px;
+      padding: 4px 7px;
       border-bottom: 1px solid var(--border);
       background: #fbfcff;
     }
 
     .panel-header h2 {
-      margin: 0 0 2px;
-      font-size: 0.98rem;
+      margin: 0 0 1px;
+      font-size: 0.82rem;
     }
 
     .panel-header p {
       margin: 0;
       color: var(--muted);
-      font-size: 0.8rem;
-      line-height: 1.2;
+      font-size: 0.72rem;
+      line-height: 1.1;
     }
 
     .panel-actions {
       display: flex;
-      gap: 6px;
+      gap: 4px;
       flex-wrap: wrap;
-      margin-top: 6px;
+      margin-top: 4px;
     }
 
     button {
       border: 0;
       border-radius: 8px;
-      padding: 6px 8px;
+      padding: 4px 7px;
       cursor: pointer;
       color: #fff;
       background: var(--primary);
       font-weight: 700;
-      font-size: 0.78rem;
+      font-size: 0.72rem;
       transition: background 0.15s ease, transform 0.15s ease;
     }
 
@@ -240,14 +278,14 @@
     .table-host {
       flex: 1 1 auto;
       min-height: 0;
-      padding: 8px;
+      padding: 6px;
       display: flex;
       flex-direction: column;
     }
 
     .table-panel {
-      height: calc(100vh - 150px);
-      min-height: 320px;
+      height: 100%;
+      min-height: 260px;
       flex: 1 1 auto;
     }
 
@@ -264,7 +302,7 @@
       border: 1px solid var(--border);
       border-radius: 12px;
       overflow: hidden;
-      font-size: 0.9rem;
+      font-size: 0.82rem;
     }
 
     .tabulator .tabulator-header {
@@ -283,22 +321,30 @@
       flex: 0 0 auto;
       margin-top: 6px;
       color: var(--muted);
-      font-size: 0.78rem;
+      font-size: 0.72rem;
       line-height: 1.25;
     }
 
     @media (max-width: 1280px) {
       .tables-layout {
-        grid-template-columns: 1fr;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        overflow: visible;
+      }
+
+      .splitter {
+        display: none;
+      }
+
+      .panel {
+        width: 100% !important;
+        flex: none !important;
       }
 
       .app-shell {
         height: auto;
         overflow: visible;
-      }
-
-      .tables-layout {
-        min-height: 0;
       }
 
       .table-panel {
@@ -350,7 +396,7 @@
     </section>
 
     <section class="tables-layout" aria-label="Analysetabellen">
-      <article class="panel">
+      <article class="panel" id="panelGroups" style="flex: 0 0 14%;">
         <header class="panel-header">
           <h2>1. Lagergruppen</h2>
           <p>Lagergruppe auswählen, um Artikel anzuzeigen.</p>
@@ -360,7 +406,9 @@
         </div>
       </article>
 
-      <article class="panel">
+      <div class="splitter" data-left="panelGroups" data-right="panelArticles" title="Breite ändern"></div>
+
+      <article class="panel" id="panelArticles" style="flex: 0 0 32%;">
         <header class="panel-header">
           <h2>2. Artikel im Lagerbereich</h2>
           <p>Artikel auswählen, um Paletten anzuzeigen.</p>
@@ -370,7 +418,9 @@
         </div>
       </article>
 
-      <article class="panel">
+      <div class="splitter" data-left="panelArticles" data-right="panelDetails" title="Breite ändern"></div>
+
+      <article class="panel" id="panelDetails" style="flex: 1 1 auto;">
         <header class="panel-header">
           <h2>3. Paletten Details</h2>
           <p>Gefilterte Paletten des ausgewählten Artikels.</p>
@@ -410,6 +460,11 @@
       "Menge [VE]",
       "Höhe [cm]",
     ];
+
+    const LHM_ANL_DATUM_COLUMN = "LHM-Anl.-Datum";
+    const LHM_ANL_TAGE_FIELD = "lhmAnlTage";
+    const LHM_AEND_DATUM_COLUMN = "LHM-Änd.Datum";
+    const LHM_AEND_TAGE_FIELD = "lhmAendTage";
 
     const state = {
       allRows: [],
@@ -491,6 +546,44 @@
       return text;
     }
 
+    function parseDateValue(value) {
+      if (value === null || value === undefined || value === "") return null;
+
+      if (value instanceof Date && !Number.isNaN(value.getTime())) {
+        return value;
+      }
+
+      if (typeof value === "number" && Number.isFinite(value)) {
+        const parsed = XLSX.SSF.parse_date_code(value);
+        if (parsed) {
+          return new Date(parsed.y, parsed.m - 1, parsed.d);
+        }
+      }
+
+      const text = String(value).trim();
+      const germanDate = text.match(/^(\d{1,2})[./-](\d{1,2})[./-](\d{2,4})$/);
+      if (germanDate) {
+        const [, day, month, rawYear] = germanDate;
+        const year = Number(rawYear.length === 2 ? `20${rawYear}` : rawYear);
+        return new Date(year, Number(month) - 1, Number(day));
+      }
+
+      const parsedDate = new Date(text);
+      return Number.isNaN(parsedDate.getTime()) ? null : parsedDate;
+    }
+
+    function calculateDaysSince(value) {
+      const date = parseDateValue(value);
+      if (!date) return "";
+
+      const today = new Date();
+      const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+      const dateStart = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+      const millisecondsPerDay = 24 * 60 * 60 * 1000;
+
+      return Math.floor((todayStart - dateStart) / millisecondsPerDay);
+    }
+
     function normalizeRowKeys(row) {
       return Object.entries(row).reduce((normalized, [key, value]) => {
         normalized[String(key).trim()] = value;
@@ -516,6 +609,8 @@
           "Menge [VE]": menge,
           "Höhe [cm]": hoehe,
           MHD: normalizeMhd(row.MHD),
+          [LHM_ANL_TAGE_FIELD]: calculateDaysSince(row[LHM_ANL_DATUM_COLUMN]),
+          [LHM_AEND_TAGE_FIELD]: calculateDaysSince(row[LHM_AEND_DATUM_COLUMN]),
         };
       });
     }
@@ -564,6 +659,8 @@
             "Artikel-Bezeichnung": row["Artikel-Bezeichnung"] || "",
             lhmSet: new Set(),
             mhdValues: [],
+            lhmAnlTageValues: [],
+            lhmAendTageValues: [],
           });
         }
 
@@ -573,6 +670,8 @@
         }
         if (row["LHM-Nr."]) article.lhmSet.add(String(row["LHM-Nr."]));
         if (row.MHD) article.mhdValues.push(row.MHD);
+        if (Number.isFinite(row[LHM_ANL_TAGE_FIELD])) article.lhmAnlTageValues.push(row[LHM_ANL_TAGE_FIELD]);
+        if (Number.isFinite(row[LHM_AEND_TAGE_FIELD])) article.lhmAendTageValues.push(row[LHM_AEND_TAGE_FIELD]);
       });
 
       return Array.from(grouped.values())
@@ -582,6 +681,8 @@
             "Artikel-Nr.": article["Artikel-Nr."],
             "Artikel-Bezeichnung": article["Artikel-Bezeichnung"],
             anzahlLhm: article.lhmSet.size,
+            lhmAnlTageMax: article.lhmAnlTageValues.length ? Math.max(...article.lhmAnlTageValues) : "",
+            lhmAendTageMax: article.lhmAendTageValues.length ? Math.max(...article.lhmAendTageValues) : "",
             mhdMin: sortedMhd[0] || "",
             mhdMax: sortedMhd[sortedMhd.length - 1] || "",
           };
@@ -589,10 +690,14 @@
         .sort((a, b) => String(a["Artikel-Nr."]).localeCompare(String(b["Artikel-Nr."]), "de"));
     }
 
-    // Liefert die Paletten des ausgewählten Artikels in derselben Lagergruppe.
-    function buildDetailRows(data, selectedLagerGruppe, selectedArtikelNr) {
+    // Liefert Paletten der ausgewählten Lagergruppe. Optional wird zusätzlich nach Artikel gefiltert.
+    function buildDetailRows(data, selectedLagerGruppe, selectedArtikelNr = null) {
       return data
-        .filter((row) => row.lagerGruppe === selectedLagerGruppe && String(row["Artikel-Nr."]) === String(selectedArtikelNr))
+        .filter((row) => {
+          const isSameLager = row.lagerGruppe === selectedLagerGruppe;
+          const isSameArtikel = selectedArtikelNr === null || String(row["Artikel-Nr."]) === String(selectedArtikelNr);
+          return isSameLager && isSameArtikel;
+        })
         .map((row) => ({
           __rowId: row.__rowId,
           "LHM-Nr.": row["LHM-Nr."],
@@ -600,6 +705,8 @@
           "Auftrags-Nr.": row["Auftrags-Nr."],
           MHD: row.MHD,
           "TP-Status": row["TP-Status"],
+          [LHM_ANL_TAGE_FIELD]: row[LHM_ANL_TAGE_FIELD],
+          [LHM_AEND_TAGE_FIELD]: row[LHM_AEND_TAGE_FIELD],
           "Menge [VE]": row["Menge [VE]"],
           "Höhe [cm]": row["Höhe [cm]"],
         }));
@@ -627,9 +734,9 @@
       index: "lagerGruppe",
       initialSort: [{ column: "lagerGruppe", dir: "asc" }],
       columns: [
-        { title: "Lager", field: "lagerGruppe", headerFilter: "input", minWidth: 110 },
-        { title: "LHM", field: "anzahlLhm", sorter: "number", hozAlign: "right", width: 78 },
-        { title: "Artikel", field: "anzahlArtikel", sorter: "number", hozAlign: "right", width: 86 },
+        { title: "Lager", field: "lagerGruppe", headerFilter: "input", width: 85 },
+        { title: "LHM", field: "anzahlLhm", sorter: "number", hozAlign: "right", width: 68 },
+        { title: "Artikel", field: "anzahlArtikel", sorter: "number", hozAlign: "right", width: 82 },
       ],
     });
 
@@ -637,11 +744,13 @@
       ...commonTableOptions,
       index: "Artikel-Nr.",
       columns: [
-        { title: "Artikel-Nr.", field: "Artikel-Nr.", headerFilter: "input", minWidth: 130 },
-        { title: "Artikelbezeichnung", field: "Artikel-Bezeichnung", headerFilter: "input", minWidth: 210 },
-        { title: "LHM", field: "anzahlLhm", sorter: "number", hozAlign: "right", width: 80 },
-        { title: "MHD Min", field: "mhdMin", headerFilter: "input", minWidth: 115 },
-        { title: "MHD Max", field: "mhdMax", headerFilter: "input", minWidth: 115 },
+        { title: "Nr.", field: "Artikel-Nr.", headerFilter: "input", width: 88 },
+        { title: "Bezeichnung", field: "Artikel-Bezeichnung", headerFilter: "input", width: 122 },
+        { title: "LHM", field: "anzahlLhm", sorter: "number", hozAlign: "right", width: 68 },
+        { title: "Anl.", field: "lhmAnlTageMax", sorter: "number", hozAlign: "right", width: 62 },
+        { title: "Änd.", field: "lhmAendTageMax", sorter: "number", hozAlign: "right", width: 67 },
+        { title: "MHD-", field: "mhdMin", headerFilter: "input", width: 82 },
+        { title: "MHD+", field: "mhdMax", headerFilter: "input", width: 82 },
       ],
     });
 
@@ -649,16 +758,18 @@
       ...commonTableOptions,
       index: "__rowId",
       selectableRows: true,
-      placeholder: "Bitte zuerst Lagergruppe und Artikel auswählen.",
+      placeholder: "Bitte zuerst eine Lagergruppe auswählen.",
       columns: [
         { formatter: "rowSelection", titleFormatter: "rowSelection", hozAlign: "center", headerSort: false, width: 48 },
-        { title: "LHM-Nr.", field: "LHM-Nr.", headerFilter: "input", minWidth: 130 },
-        { title: "Lagerplatz Koordinate", field: "Lagerplatz Koordinate", headerFilter: "input", minWidth: 205 },
-        { title: "Auftrags-Nr.", field: "Auftrags-Nr.", headerFilter: "input", minWidth: 135 },
-        { title: "MHD", field: "MHD", headerFilter: "input", minWidth: 115 },
-        { title: "TP-Status", field: "TP-Status", headerFilter: "list", headerFilterParams: { valuesLookup: true, clearable: true }, minWidth: 110 },
-        { title: "Menge [VE]", field: "Menge [VE]", sorter: "number", hozAlign: "right", formatter: (cell) => formatQuantity(cell.getValue()), minWidth: 115 },
-        { title: "Höhe [cm]", field: "Höhe [cm]", sorter: "number", hozAlign: "right", formatter: (cell) => formatQuantity(cell.getValue()), minWidth: 105 },
+        { title: "LHM", field: "LHM-Nr.", headerFilter: "input", width: 138  },
+        { title: "Lagerplatz", field: "Lagerplatz Koordinate", headerFilter: "input", width: 153 },
+        { title: "Auftr.", field: "Auftrags-Nr.", headerFilter: "input", width: 92 },
+        { title: "MHD", field: "MHD", headerFilter: "input", width: 78 },
+        { title: "TP", field: "TP-Status", headerFilter: "list", hozAlign: "right", headerFilterParams: { valuesLookup: true, clearable: true }, width: 54 },
+        { title: "Anl.", field: "lhmAnlTage", sorter: "number", hozAlign: "right", width: 62 },
+        { title: "Änd.", field: "lhmAendTage", sorter: "number", hozAlign: "right", width: 67 },
+        { title: "[VE]", field: "Menge [VE]", sorter: "number", hozAlign: "right", formatter: (cell) => formatQuantity(cell.getValue()), width: 63 },
+        { title: "Höhe", field: "Höhe [cm]", sorter: "number", hozAlign: "right", formatter: (cell) => formatQuantity(cell.getValue()), width: 72 },
       ],
     });
 
@@ -667,19 +778,37 @@
       state.selectedLagerGruppe = group.lagerGruppe;
       state.selectedArtikelNr = null;
       groupTable.deselectRow();
+      articleTable.deselectRow();
       row.select();
+
       const articleRows = buildArticleSummary(state.allRows, state.selectedLagerGruppe);
+      state.currentDetailRows = buildDetailRows(state.allRows, state.selectedLagerGruppe);
+
       articleTable.setData(articleRows);
-      detailTable.clearData();
-      state.currentDetailRows = [];
+      detailTable.setData(state.currentDetailRows);
       updateSummary(articleRows.length);
-      updateDetailButtons(false);
-      setStatus(`Lagergruppe ${state.selectedLagerGruppe} ausgewählt: ${articleRows.length} Artikel.`, "success");
+      updateDetailButtons(state.currentDetailRows.length > 0);
+      setStatus(`Lagergruppe ${state.selectedLagerGruppe} ausgewählt: ${articleRows.length} Artikel und ${state.currentDetailRows.length} Paletten.`, "success");
     });
 
     articleTable.on("rowClick", (event, row) => {
+      if (!state.selectedLagerGruppe) return;
+
       const article = row.getData();
-      state.selectedArtikelNr = article["Artikel-Nr."];
+      const clickedArtikelNr = article["Artikel-Nr."];
+
+      // Klick auf denselben Artikel hebt den Artikelfilter wieder auf und zeigt alle Paletten der Lagergruppe.
+      if (String(state.selectedArtikelNr) === String(clickedArtikelNr)) {
+        state.selectedArtikelNr = null;
+        articleTable.deselectRow();
+        state.currentDetailRows = buildDetailRows(state.allRows, state.selectedLagerGruppe);
+        detailTable.setData(state.currentDetailRows);
+        updateDetailButtons(state.currentDetailRows.length > 0);
+        setStatus(`Artikelfilter aufgehoben: ${state.currentDetailRows.length} Paletten in Lagergruppe ${state.selectedLagerGruppe}.`, "success");
+        return;
+      }
+
+      state.selectedArtikelNr = clickedArtikelNr;
       articleTable.deselectRow();
       row.select();
       state.currentDetailRows = buildDetailRows(state.allRows, state.selectedLagerGruppe, state.selectedArtikelNr);
@@ -720,7 +849,7 @@
     });
 
     elements.restoreDetailBtn.addEventListener("click", () => {
-      if (!state.selectedLagerGruppe || !state.selectedArtikelNr) return;
+      if (!state.selectedLagerGruppe) return;
       state.currentDetailRows = buildDetailRows(state.allRows, state.selectedLagerGruppe, state.selectedArtikelNr);
       detailTable.setData(state.currentDetailRows);
       updateDetailButtons(state.currentDetailRows.length > 0);
@@ -810,9 +939,63 @@
 
     function buildDownloadFileName(extension) {
       const group = state.selectedLagerGruppe || "gruppe";
-      const article = state.selectedArtikelNr || "artikel";
+      const article = state.selectedArtikelNr || "alle_artikel";
       return `paletten_details_${group}_${article}.${extension}`.replace(/[^a-zA-Z0-9_.-]/g, "_");
     }
+
+
+    function initResizablePanels() {
+      const splitters = document.querySelectorAll(".splitter");
+      const layout = document.querySelector(".tables-layout");
+      if (!layout || splitters.length === 0) return;
+
+      splitters.forEach((splitter) => {
+        splitter.addEventListener("pointerdown", (event) => {
+          if (window.matchMedia("(max-width: 1280px)").matches) return;
+
+          event.preventDefault();
+          splitter.setPointerCapture(event.pointerId);
+          splitter.classList.add("dragging");
+
+          const leftPanel = document.getElementById(splitter.dataset.left);
+          const rightPanel = document.getElementById(splitter.dataset.right);
+          if (!leftPanel || !rightPanel) return;
+
+          const layoutWidth = layout.getBoundingClientRect().width;
+          const leftStart = leftPanel.getBoundingClientRect().width;
+          const rightStart = rightPanel.getBoundingClientRect().width;
+          const startX = event.clientX;
+          const minWidth = 180;
+
+          function onMove(moveEvent) {
+            const delta = moveEvent.clientX - startX;
+            const newLeft = Math.max(minWidth, leftStart + delta);
+            const newRight = Math.max(minWidth, rightStart - delta);
+
+            if (newLeft === minWidth || newRight === minWidth) return;
+
+            leftPanel.style.flex = `0 0 ${(newLeft / layoutWidth) * 100}%`;
+            rightPanel.style.flex = `0 0 ${(newRight / layoutWidth) * 100}%`;
+
+            [groupTable, articleTable, detailTable].forEach((table) => table.redraw(true));
+          }
+
+          function onUp() {
+            splitter.classList.remove("dragging");
+            splitter.removeEventListener("pointermove", onMove);
+            splitter.removeEventListener("pointerup", onUp);
+            splitter.removeEventListener("pointercancel", onUp);
+            [groupTable, articleTable, detailTable].forEach((table) => table.redraw(true));
+          }
+
+          splitter.addEventListener("pointermove", onMove);
+          splitter.addEventListener("pointerup", onUp);
+          splitter.addEventListener("pointercancel", onUp);
+        });
+      });
+    }
+
+    initResizablePanels();
   </script>
 </body>
 </html>
