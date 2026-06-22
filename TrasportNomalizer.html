@@ -50,64 +50,595 @@
 'use strict';
 
 // Zentrale Konstanten für spätere Erweiterungen um KOMMISSIONIERER und SG.
-const SYSTEM_TYPES = { STAPLER: 'STAPLER', KOMMISSIONIERER: 'KOMMISSIONIERER', SG: 'SG' };
-const DEFAULT_SETTINGS = {
-  alreadyAnalysedUntil: '', outputPrefix: 'stapler_normalisiert', debugPrefix: 'DEBUG_stapler_match_probleme', kalenderwocheModus: 'ISO', zeitzone: 'Europe/Berlin',
-  staplerOhnePallet: { fileNameStartsWith: ['ROHDATEN', 'stapler_prämie'], sheets: ['Staplerfahrer', 'SL', 'Tabelle1'] },
-  staplerMitPallet: { fileNameStartsWith: ['ROHDATEN', 'stapler_prämie', 'Stapler', 'Transport'], sheets: ['Staplerfahrer', 'SL', 'Tabelle1'] }
+const SYSTEM_TYPES = {
+  STAPLER: 'STAPLER',
+  KOMMISSIONIERER: 'KOMMISSIONIERER',
+  SG: 'SG'
 };
+
+const DEFAULT_SETTINGS = {
+  alreadyAnalysedUntil: '',
+  outputPrefix: 'stapler_normalisiert',
+  debugPrefix: 'DEBUG_stapler_match_probleme',
+  kalenderwocheModus: 'ISO',
+  zeitzone: 'Europe/Berlin',
+  includeOriginalJsonInDebug: false,
+  staplerOhnePallet: {
+    fileNameStartsWith: ['ROHDATEN', 'stapler_prämie'],
+    sheets: ['Staplerfahrer', 'SL', 'Tabelle1']
+  },
+  staplerMitPallet: {
+    fileNameStartsWith: ['ROHDATEN', 'stapler_prämie', 'Stapler', 'Transport'],
+    sheets: ['Staplerfahrer', 'SL', 'Tabelle1']
+  }
+};
+
 const SETTINGS = mergeDeep(DEFAULT_SETTINGS, window.APP_SETTINGS || {});
 const OUTPUT_COLUMNS = ['Source_File','Source_Row','Transport_ID','System_Typ','BEGINN_DATUM','END_DATUM','ERSTER_TRANSPORT','LETZTER_TRANSPORT','ARBEITSSTUNDEN','START_KOORDINATE','ZIEL_KOORDINATE','SL_BEREICH','SL_TERMINAL','SL_BENUTZER','LHM_NR','ARTIKEL_NR','Match_Methode','Match_Qualität','Debug_Hinweis','Kandidaten_Anzahl','Matched_Source_File','Matched_Source_Row'];
+const DEBUG_COLUMNS = ['Source_File','Source_Row','BEGINN_DATUM','START_KOORDINATE','ZIEL_KOORDINATE','SL_BEREICH','SL_TERMINAL','SL_BENUTZER','Match_Methode','Match_Qualität','Debug_Hinweis','Kandidaten_Anzahl'];
 const REQUIRED_WITHOUT = ['BEGINN_DATUM','START_KOORDINATE','ZIEL_KOORDINATE','SL_TERMINAL','SL_BENUTZER'];
 const REQUIRED_WITH = ['BEGINN_DATUM','START_KOORDINATE','LHM_NR','ARTIKEL_NR'];
-const state = { filesWithout: [], filesWith: [], rowsWithout: [], rowsWith: [], stats: resetStats() };
+const state = {
+  filesWithout: [],
+  filesWith: [],
+  rowsWithout: [],
+  rowsWith: [],
+  stats: resetStats()
+};
 
-function resetStats(){ return { filesWithout:0, filesWith:0, rowsWithout:0, rowsWith:0, analysed:0, sicher:0, wahrscheinlich:0, unsicher:0, mehrdeutig:0, nichtGefunden:0 }; }
-function mergeDeep(base, extra){ const out = Array.isArray(base) ? [...base] : {...base}; for (const [k,v] of Object.entries(extra || {})) out[k] = v && typeof v === 'object' && !Array.isArray(v) ? mergeDeep(out[k] || {}, v) : v; return out; }
-function log(msg, cls=''){ const el=document.getElementById('log'); const line=document.createElement('div'); line.className=cls; line.textContent=`${new Date().toLocaleTimeString('de-DE')}  ${msg}`; el.appendChild(line); el.scrollTop=el.scrollHeight; }
-function updateStatus(){ const items=[['Anzahl Dateien ohne Palettennummer',state.stats.filesWithout],['Anzahl Dateien mit Palettennummer',state.stats.filesWith],['Anzahl Zeilen ohne Palettennummer',state.stats.rowsWithout],['Anzahl Zeilen mit Palettennummer',state.stats.rowsWith],['Anzahl analysierte Zeilen',state.stats.analysed],['Anzahl sichere Matches',state.stats.sicher],['Anzahl wahrscheinliche Matches',state.stats.wahrscheinlich],['Anzahl unsichere Matches',state.stats.unsicher],['Anzahl mehrdeutige Matches',state.stats.mehrdeutig],['Anzahl nicht gefundene Matches',state.stats.nichtGefunden]]; document.getElementById('status').innerHTML=items.map(([l,v])=>`<div class="metric"><div class="metric-label">${l}</div><div class="metric-value">${v}</div></div>`).join(''); }
-
-function canonicalColumnName(name){ const raw=String(name||'').trim(); const n=raw.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[._\-\s]+/g,''); const map={ startkoordinate:'START_KOORDINATE', quellkoordinate:'START_KOORDINATE', zielkoordinate:'ZIEL_KOORDINATE', slbereich:'SL_BEREICH', slterminal:'SL_TERMINAL', slbenutzer:'SL_BENUTZER', beginndatum:'BEGINN_DATUM', beginndate:'BEGINN_DATUM', enddatum:'END_DATUM', aenderungsdatum:'END_DATUM', anderungsdatum:'END_DATUM', lhmnr:'LHM_NR', lhmnummer:'LHM_NR', lhmnr:'LHM_NR', artikelnr:'ARTIKEL_NR', artikelnummer:'ARTIKEL_NR', erstertransport:'ERSTER_TRANSPORT', letztertransport:'LETZTER_TRANSPORT', arbeitsstunden:'ARBEITSSTUNDEN' }; return map[n] || raw.replace(/[\s\-.]+/g,'_').toUpperCase(); }
-function normalizeValue(v){ return v == null ? '' : String(v).trim(); }
-function normalizeCoord(v){ return normalizeValue(v).toUpperCase(); }
-function pad(n,len=2){ return String(n).padStart(len,'0'); }
-function excelSerialToDate(serial){ const utcDays=Math.floor(serial-25569); const utcValue=utcDays*86400; const d=new Date(utcValue*1000); const frac=serial-Math.floor(serial); d.setSeconds(d.getSeconds()+Math.round(frac*86400)); return d; }
-function formatDate(d){ return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`; }
-function normalizeDateTime(value){ if(value == null || value === '') return ''; if(value instanceof Date && !isNaN(value)) return formatDate(value); if(typeof value === 'number') return formatDate(excelSerialToDate(value)); const s=String(value).trim(); let m=s.match(/^(\d{1,2})[.\-](\d{1,2})[.\-](\d{4})(?:\s+(\d{1,2}):(\d{2})(?::(\d{2}))?)?$/); if(m) return `${m[3]}-${pad(m[2])}-${pad(m[1])} ${pad(m[4]||0)}:${pad(m[5]||0)}:${pad(m[6]||0)}`; m=s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})(?:[ T](\d{1,2}):(\d{2})(?::(\d{2}))?)?$/); if(m) return `${m[1]}-${pad(m[2])}-${pad(m[3])} ${pad(m[4]||0)}:${pad(m[5]||0)}:${pad(m[6]||0)}`; const d=new Date(s); return isNaN(d) ? '' : formatDate(d); }
-function dateOnlyKey(dt){ return dt ? dt.slice(0,10).replaceAll('-','') : '00000000'; }
-function isAfterAlreadyAnalysed(dt){ if(!SETTINGS.alreadyAnalysedUntil) return true; return dt.slice(0,10) > SETTINGS.alreadyAnalysedUntil; }
-
-async function readSelectedFiles(files, kind){ const cfg = kind === 'without' ? SETTINGS.staplerOhnePallet : SETTINGS.staplerMitPallet; const required = kind === 'without' ? REQUIRED_WITHOUT : REQUIRED_WITH; const target = kind === 'without' ? state.rowsWithout : state.rowsWith; target.length = 0; for(const file of files){ try{ log(`Datei wird gelesen: ${file.name}`); const data=await file.arrayBuffer(); const wb=XLSX.read(data,{type:'array', cellDates:true}); const sheetName=selectSheet(wb, cfg.sheets); log(`Sheet wurde erkannt: ${file.name} → ${sheetName}`,'ok'); const sheet=wb.Sheets[sheetName]; const rawRows=XLSX.utils.sheet_to_json(sheet,{defval:'', raw:true}); const normalized=normalizeRows(rawRows,file.name); const missing=missingColumns(normalized.columns, required); if(missing.length){ log(`Fehler: ${file.name} wird übersprungen. Pflichtspalten fehlen: ${missing.join(', ')}`,'error'); continue; } const validRows=normalized.rows.filter(r => normalizeDateTime(r.BEGINN_DATUM)); validRows.forEach(r => { r.BEGINN_DATUM=normalizeDateTime(r.BEGINN_DATUM); r.END_DATUM=normalizeDateTime(r.END_DATUM) || normalizeValue(r.END_DATUM); r.START_KOORDINATE=normalizeCoord(r.START_KOORDINATE); r.ZIEL_KOORDINATE=normalizeCoord(r.ZIEL_KOORDINATE); r.SL_TERMINAL=normalizeValue(r.SL_TERMINAL); r.SL_BENUTZER=normalizeValue(r.SL_BENUTZER); }); target.push(...validRows); log(`Anzahl gelesene Zeilen: ${rawRows.length}; gültige Zeilen: ${validRows.length}; übersprungene Zeilen: ${rawRows.length-validRows.length}`,'ok'); } catch(err){ log(`Fehler beim Lesen von ${file.name}: ${err.message}`,'error'); } } state.stats.filesWithout=state.filesWithout.length; state.stats.filesWith=state.filesWith.length; state.stats.rowsWithout=state.rowsWithout.length; state.stats.rowsWith=state.rowsWith.length; updateStatus(); }
-function selectSheet(wb, preferred){ return (preferred || []).find(s => wb.SheetNames.includes(s)) || wb.SheetNames[0]; }
-function normalizeRows(rows, fileName){ const out=[]; const cols=new Set(); rows.forEach((row,idx)=>{ const n={ Source_File:fileName, Source_Row:idx+2, __original: JSON.stringify(row) }; Object.entries(row).forEach(([k,v])=>{ const c=canonicalColumnName(k); cols.add(c); n[c]=v; }); out.push(n); }); return { rows:out, columns:cols }; }
-function missingColumns(cols, required){ return required.filter(c => !cols.has(c)); }
-
-function buildIndexes(rows){ const idx={level1:new Map(), level2:new Map(), level3:new Map()}; rows.forEach(r=>{ addIndex(idx.level1, keyLevel1(r), r); addIndex(idx.level2, keyLevel2(r), r); addIndex(idx.level3, keyLevel3(r), r); }); log(`Index Level 1 erstellt (${idx.level1.size} Schlüssel)`,'ok'); log(`Index Level 2 erstellt (${idx.level2.size} Schlüssel)`,'ok'); log(`Index Level 3 erstellt (${idx.level3.size} Schlüssel)`,'ok'); return idx; }
-function addIndex(map,key,row){ if(!key) return; if(!map.has(key)) map.set(key,[]); map.get(key).push(row); }
-function joinKey(parts){ return parts.map(v=>normalizeValue(v)).join('|'); }
-function keyLevel1(r){ return joinKey([r.BEGINN_DATUM,r.START_KOORDINATE,r.ZIEL_KOORDINATE,r.SL_TERMINAL,r.SL_BENUTZER]); }
-function keyLevel2(r){ return joinKey([r.BEGINN_DATUM,r.START_KOORDINATE,r.ZIEL_KOORDINATE]); }
-function keyLevel3(r){ return joinKey([r.BEGINN_DATUM,r.START_KOORDINATE]); }
-function findMatch(row,indexes){ const levels=[{c:indexes.level1.get(keyLevel1(row))||[], m:'BEGINN+START+ZIEL+TERMINAL+BENUTZER', q:'SICHER'}, {c:indexes.level2.get(keyLevel2(row))||[], m:'BEGINN+START+ZIEL', q:'WAHRSCHEINLICH'}, {c:indexes.level3.get(keyLevel3(row))||[], m:'BEGINN+START', q:'UNSICHER'}]; for(const l of levels){ if(l.c.length===1) return {...l, row:l.c[0], hint:'', count:1}; if(l.c.length>1) return {...l, row:null, q:'MEHRDEUTIG', hint:'Mehrere mögliche Treffer gefunden', count:l.c.length}; } return {row:null, m:'', q:'NICHT_GEFUNDEN', hint:'Kein Treffer gefunden', count:0}; }
-function makeTransportIds(rows){ const counters={}; rows.forEach(r=>{ const d=dateOnlyKey(r.BEGINN_DATUM); counters[d]=(counters[d]||0)+1; r.Transport_ID=`${SYSTEM_TYPES.STAPLER}_${d}_${pad(counters[d],6)}`; }); }
-function analyse(){ if(!state.rowsWithout.length || !state.rowsWith.length){ log('Analyse nicht möglich: Bitte beide Dateigruppen laden.','error'); return; } log('Analyse gestartet'); state.stats={...state.stats, analysed:0, sicher:0, wahrscheinlich:0, unsicher:0, mehrdeutig:0, nichtGefunden:0}; const rowsToAnalyse=state.rowsWithout.filter(r=>isAfterAlreadyAnalysed(r.BEGINN_DATUM)); rowsToAnalyse.sort((a,b)=>(a.BEGINN_DATUM+a.Source_File+a.Source_Row).localeCompare(b.BEGINN_DATUM+b.Source_File+b.Source_Row)); makeTransportIds(rowsToAnalyse); const indexes=buildIndexes(state.rowsWith); const results=[]; for(const row of rowsToAnalyse){ const match=findMatch(row,indexes); const matched=match.row; const out={ Source_File:row.Source_File, Source_Row:row.Source_Row, Transport_ID:row.Transport_ID, System_Typ:SYSTEM_TYPES.STAPLER, BEGINN_DATUM:row.BEGINN_DATUM, END_DATUM:row.END_DATUM||'', ERSTER_TRANSPORT:normalizeValue(row.ERSTER_TRANSPORT), LETZTER_TRANSPORT:normalizeValue(row.LETZTER_TRANSPORT), ARBEITSSTUNDEN:normalizeValue(row.ARBEITSSTUNDEN), START_KOORDINATE:row.START_KOORDINATE, ZIEL_KOORDINATE:row.ZIEL_KOORDINATE, SL_BEREICH:normalizeValue(row.SL_BEREICH), SL_TERMINAL:normalizeValue(row.SL_TERMINAL), SL_BENUTZER:normalizeValue(row.SL_BENUTZER), LHM_NR:matched?normalizeValue(matched.LHM_NR):'', ARTIKEL_NR:matched?normalizeValue(matched.ARTIKEL_NR):'', Match_Methode:match.m, Match_Qualität:match.q, Debug_Hinweis:match.hint, Kandidaten_Anzahl:match.count, Matched_Source_File:matched?matched.Source_File:'', Matched_Source_Row:matched?matched.Source_Row:'' };
-    out.Originalfelder = row.__original; results.push(out); state.stats.analysed++; if(match.q==='SICHER') state.stats.sicher++; else if(match.q==='WAHRSCHEINLICH') state.stats.wahrscheinlich++; else if(match.q==='UNSICHER') state.stats.unsicher++; else if(match.q==='MEHRDEUTIG') state.stats.mehrdeutig++; else state.stats.nichtGefunden++; }
-  updateStatus(); log('Analyse abgeschlossen','ok'); createZip(results).catch(err=>log(`Fehler beim ZIP-Export: ${err.message}`,'error'));
+function resetStats() {
+  return {
+    filesWithout: 0,
+    filesWith: 0,
+    rowsWithout: 0,
+    rowsWith: 0,
+    analysed: 0,
+    sicher: 0,
+    wahrscheinlich: 0,
+    unsicher: 0,
+    mehrdeutig: 0,
+    nichtGefunden: 0
+  };
 }
-function isoWeek(dtString){ const d=new Date(`${dtString.slice(0,10)}T00:00:00`); d.setDate(d.getDate()+4-(d.getDay()||7)); const yearStart=new Date(d.getFullYear(),0,1); const week=Math.ceil((((d-yearStart)/86400000)+1)/7); return {year:d.getFullYear(), week}; }
-function groupByWeek(rows){ const groups=new Map(); rows.forEach(r=>{ const w=isoWeek(r.BEGINN_DATUM); const key=`${w.year}_KW${pad(w.week)}`; if(!groups.has(key)) groups.set(key,[]); groups.get(key).push(r); }); return groups; }
-function csvEscape(v){ const s=v == null ? '' : String(v); return /[;"\r\n]/.test(s) ? `"${s.replaceAll('"','""')}"` : s; }
-function toCsv(rows, cols){ return '\ufeff' + [cols.join(';'), ...rows.map(r=>cols.map(c=>csvEscape(r[c])).join(';'))].join('\r\n'); }
-async function createZip(results){ const zip=new JSZip(); const groups=groupByWeek(results); for(const [week,rows] of groups.entries()) zip.file(`${SETTINGS.outputPrefix}_${week}.csv`, toCsv(rows, OUTPUT_COLUMNS)); const debugRows=results.filter(r=>r.Match_Qualität==='MEHRDEUTIG' || r.Match_Qualität==='NICHT_GEFUNDEN'); zip.file(`${SETTINGS.debugPrefix}.csv`, toCsv(debugRows, [...OUTPUT_COLUMNS,'Originalfelder'])); const blob=await zip.generateAsync({type:'blob'}); downloadBlob(blob, `stapler_normalisierung_${zipTimestamp()}.zip`); log('ZIP wurde erzeugt','ok'); }
-function zipTimestamp(){ const d=new Date(); return `${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}_${pad(d.getHours())}${pad(d.getMinutes())}`; }
-function downloadBlob(blob,name){ const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=name; document.body.appendChild(a); a.click(); setTimeout(()=>{ URL.revokeObjectURL(a.href); a.remove(); },1000); }
 
-document.getElementById('btnOhne').addEventListener('click',()=>document.getElementById('inputOhne').click());
-document.getElementById('btnMit').addEventListener('click',()=>document.getElementById('inputMit').click());
-document.getElementById('btnAnalyse').addEventListener('click',analyse);
-document.getElementById('inputOhne').addEventListener('change',e=>{ state.filesWithout=[...e.target.files]; readSelectedFiles(state.filesWithout,'without'); });
-document.getElementById('inputMit').addEventListener('change',e=>{ state.filesWith=[...e.target.files]; readSelectedFiles(state.filesWith,'with'); });
-updateStatus(); log(window.APP_SETTINGS ? 'setting.js geladen.' : 'setting.js nicht gefunden oder leer: Default-Werte werden verwendet.','warn');
+function mergeDeep(base, extra) {
+  const out = Array.isArray(base) ? base.slice() : Object.assign({}, base);
+
+  for (const [key, value] of Object.entries(extra || {})) {
+    if (value && typeof value === 'object' && !Array.isArray(value)) {
+      out[key] = mergeDeep(out[key] || {}, value);
+    } else {
+      out[key] = value;
+    }
+  }
+
+  return out;
+}
+
+function log(msg, cls = '') {
+  const el = document.getElementById('log');
+  const line = document.createElement('div');
+
+  line.className = cls;
+  line.textContent = `${new Date().toLocaleTimeString('de-DE')}  ${msg}`;
+  el.appendChild(line);
+  el.scrollTop = el.scrollHeight;
+}
+
+function updateStatus() {
+  const items = [
+    ['Anzahl Dateien ohne Palettennummer', state.stats.filesWithout],
+    ['Anzahl Dateien mit Palettennummer', state.stats.filesWith],
+    ['Anzahl Zeilen ohne Palettennummer', state.stats.rowsWithout],
+    ['Anzahl Zeilen mit Palettennummer', state.stats.rowsWith],
+    ['Anzahl analysierte Zeilen', state.stats.analysed],
+    ['Anzahl sichere Matches', state.stats.sicher],
+    ['Anzahl wahrscheinliche Matches', state.stats.wahrscheinlich],
+    ['Anzahl unsichere Matches', state.stats.unsicher],
+    ['Anzahl mehrdeutige Matches', state.stats.mehrdeutig],
+    ['Anzahl nicht gefundene Matches', state.stats.nichtGefunden]
+  ];
+
+  document.getElementById('status').innerHTML = items
+    .map(([label, value]) => {
+      return `<div class="metric"><div class="metric-label">${label}</div><div class="metric-value">${value}</div></div>`;
+    })
+    .join('');
+}
+
+function canonicalColumnName(name) {
+  const raw = String(name || '').trim();
+  const n = raw
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[._\-\s]+/g, '');
+  const map = {
+    startkoordinate: 'START_KOORDINATE',
+    quellkoordinate: 'START_KOORDINATE',
+    zielkoordinate: 'ZIEL_KOORDINATE',
+    slbereich: 'SL_BEREICH',
+    slterminal: 'SL_TERMINAL',
+    slbenutzer: 'SL_BENUTZER',
+    beginndatum: 'BEGINN_DATUM',
+    beginndate: 'BEGINN_DATUM',
+    enddatum: 'END_DATUM',
+    aenderungsdatum: 'END_DATUM',
+    anderungsdatum: 'END_DATUM',
+    lhmnr: 'LHM_NR',
+    lhmnummer: 'LHM_NR',
+    artikelnr: 'ARTIKEL_NR',
+    artikelnummer: 'ARTIKEL_NR',
+    erstertransport: 'ERSTER_TRANSPORT',
+    letztertransport: 'LETZTER_TRANSPORT',
+    arbeitsstunden: 'ARBEITSSTUNDEN'
+  };
+
+  return map[n] || raw.replace(/[\s\-.]+/g, '_').toUpperCase();
+}
+
+function normalizeValue(v) {
+  return v == null ? '' : String(v).trim();
+}
+
+function normalizeCoord(v) {
+  return normalizeValue(v).toUpperCase();
+}
+
+function pad(n, len = 2) {
+  return String(n).padStart(len, '0');
+}
+
+function excelSerialToDate(serial) {
+  const utcDays = Math.floor(serial - 25569);
+  const utcValue = utcDays * 86400;
+  const d = new Date(utcValue * 1000);
+  const frac = serial - Math.floor(serial);
+
+  d.setSeconds(d.getSeconds() + Math.round(frac * 86400));
+  return d;
+}
+
+function formatDate(d) {
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+}
+
+function normalizeDateTime(value) {
+  if (value == null || value === '') {
+    return '';
+  }
+
+  if (value instanceof Date && !isNaN(value)) {
+    return formatDate(value);
+  }
+
+  if (typeof value === 'number') {
+    return formatDate(excelSerialToDate(value));
+  }
+
+  const s = String(value).trim();
+  let m = s.match(/^(\d{1,2})[.\-](\d{1,2})[.\-](\d{4})(?:\s+(\d{1,2}):(\d{2})(?::(\d{2}))?)?$/);
+
+  if (m) {
+    return `${m[3]}-${pad(m[2])}-${pad(m[1])} ${pad(m[4] || 0)}:${pad(m[5] || 0)}:${pad(m[6] || 0)}`;
+  }
+
+  m = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})(?:[ T](\d{1,2}):(\d{2})(?::(\d{2}))?)?$/);
+
+  if (m) {
+    return `${m[1]}-${pad(m[2])}-${pad(m[3])} ${pad(m[4] || 0)}:${pad(m[5] || 0)}:${pad(m[6] || 0)}`;
+  }
+
+  const d = new Date(s);
+  return isNaN(d) ? '' : formatDate(d);
+}
+
+function dateOnlyKey(dt) {
+  return dt ? dt.slice(0, 10).replaceAll('-', '') : '00000000';
+}
+
+function isAfterAlreadyAnalysed(dt) {
+  if (!SETTINGS.alreadyAnalysedUntil) {
+    return true;
+  }
+
+  return dt.slice(0, 10) > SETTINGS.alreadyAnalysedUntil;
+}
+
+function formatFileSize(bytes) {
+  return `${(bytes / 1024 / 1024).toFixed(2)} MB`;
+}
+
+function describeError(err) {
+  const message = err && err.message ? err.message : String(err);
+
+  if (message.includes('Maximum call stack size exceeded')) {
+    return 'Maximale Aufrufstapelgröße überschritten. Wahrscheinlich wurden zu viele Zeilen auf einmal verarbeitet. Keine Spread-Operatoren auf großen Arrays verwenden.';
+  }
+
+  return message;
+}
+
+function pushRowsSafe(target, rows) {
+  for (let i = 0; i < rows.length; i++) {
+    target.push(rows[i]);
+  }
+}
+
+async function readSelectedFiles(files, kind) {
+  const cfg = kind === 'without' ? SETTINGS.staplerOhnePallet : SETTINGS.staplerMitPallet;
+  const required = kind === 'without' ? REQUIRED_WITHOUT : REQUIRED_WITH;
+  const target = kind === 'without' ? state.rowsWithout : state.rowsWith;
+
+  target.length = 0;
+
+  for (const file of files) {
+    try {
+      log(`Datei wird gelesen: ${file.name}`);
+      log(`Dateigröße: ${formatFileSize(file.size)}`);
+
+      if (file.size > 30 * 1024 * 1024) {
+        log('Warnung: Diese Datei ist größer als 30 MB. Die Verarbeitung kann länger dauern.', 'warn');
+      }
+
+      const data = await file.arrayBuffer();
+      const wb = XLSX.read(data, { type: 'array', cellDates: true });
+      const sheetName = selectSheet(wb, cfg.sheets);
+      log(`Sheet wurde erkannt: ${sheetName}`, 'ok');
+
+      const sheet = wb.Sheets[sheetName];
+      const rawRows = XLSX.utils.sheet_to_json(sheet, { defval: '', raw: true });
+      log(`Zeilen gelesen: ${rawRows.length}`);
+
+      if (rawRows.length > 100000) {
+        log('Warnung: Mehr als 100.000 Zeilen erkannt. Die Verarbeitung kann viel Speicher benötigen.', 'warn');
+      }
+
+      const normalized = normalizeRows(rawRows, file.name);
+      const missing = missingColumns(normalized.columns, required);
+
+      if (missing.length) {
+        log(`Fehler: ${file.name} wird übersprungen. Pflichtspalten fehlen: ${missing.join(', ')}`, 'error');
+        continue;
+      }
+
+      const validRows = [];
+
+      for (const row of normalized.rows) {
+        const beginnDatum = normalizeDateTime(row.BEGINN_DATUM);
+
+        if (!beginnDatum) {
+          continue;
+        }
+
+        row.BEGINN_DATUM = beginnDatum;
+        row.END_DATUM = normalizeDateTime(row.END_DATUM) || normalizeValue(row.END_DATUM);
+        row.START_KOORDINATE = normalizeCoord(row.START_KOORDINATE);
+        row.ZIEL_KOORDINATE = normalizeCoord(row.ZIEL_KOORDINATE);
+        row.SL_TERMINAL = normalizeValue(row.SL_TERMINAL);
+        row.SL_BENUTZER = normalizeValue(row.SL_BENUTZER);
+        validRows.push(row);
+      }
+
+      pushRowsSafe(target, validRows);
+
+      log(`Gültige Zeilen: ${validRows.length}`, 'ok');
+      log(`Übersprungene Zeilen: ${rawRows.length - validRows.length}`, 'ok');
+    } catch (err) {
+      log(`Fehler beim Lesen von ${file.name}: ${describeError(err)}`, 'error');
+    }
+  }
+
+  state.stats.filesWithout = state.filesWithout.length;
+  state.stats.filesWith = state.filesWith.length;
+  state.stats.rowsWithout = state.rowsWithout.length;
+  state.stats.rowsWith = state.rowsWith.length;
+  updateStatus();
+}
+
+function selectSheet(wb, preferred) {
+  return (preferred || []).find(s => wb.SheetNames.includes(s)) || wb.SheetNames[0];
+}
+
+function normalizeRows(rows, fileName) {
+  const out = [];
+  const cols = new Set();
+
+  rows.forEach((row, idx) => {
+    const n = {
+      Source_File: fileName,
+      Source_Row: idx + 2,
+      __original: SETTINGS.includeOriginalJsonInDebug ? JSON.stringify(row) : ''
+    };
+
+    Object.entries(row).forEach(([key, value]) => {
+      const column = canonicalColumnName(key);
+      cols.add(column);
+      n[column] = value;
+    });
+
+    out.push(n);
+  });
+
+  return { rows: out, columns: cols };
+}
+
+function missingColumns(cols, required) {
+  return required.filter(c => !cols.has(c));
+}
+
+function buildIndexes(rows) {
+  const idx = {
+    level1: new Map(),
+    level2: new Map(),
+    level3: new Map()
+  };
+
+  rows.forEach(row => {
+    addIndex(idx.level1, keyLevel1(row), row);
+    addIndex(idx.level2, keyLevel2(row), row);
+    addIndex(idx.level3, keyLevel3(row), row);
+  });
+
+  log(`Index Level 1 erstellt (${idx.level1.size} Schlüssel)`, 'ok');
+  log(`Index Level 2 erstellt (${idx.level2.size} Schlüssel)`, 'ok');
+  log(`Index Level 3 erstellt (${idx.level3.size} Schlüssel)`, 'ok');
+  return idx;
+}
+
+function addIndex(map, key, row) {
+  if (!key) {
+    return;
+  }
+
+  if (!map.has(key)) {
+    map.set(key, []);
+  }
+
+  map.get(key).push(row);
+}
+
+function joinKey(parts) {
+  return parts.map(v => normalizeValue(v)).join('|');
+}
+
+function keyLevel1(r) {
+  return joinKey([r.BEGINN_DATUM, r.START_KOORDINATE, r.ZIEL_KOORDINATE, r.SL_TERMINAL, r.SL_BENUTZER]);
+}
+
+function keyLevel2(r) {
+  return joinKey([r.BEGINN_DATUM, r.START_KOORDINATE, r.ZIEL_KOORDINATE]);
+}
+
+function keyLevel3(r) {
+  return joinKey([r.BEGINN_DATUM, r.START_KOORDINATE]);
+}
+
+function findMatch(row, indexes) {
+  const levels = [
+    {
+      c: indexes.level1.get(keyLevel1(row)) || [],
+      m: 'BEGINN+START+ZIEL+TERMINAL+BENUTZER',
+      q: 'SICHER'
+    },
+    {
+      c: indexes.level2.get(keyLevel2(row)) || [],
+      m: 'BEGINN+START+ZIEL',
+      q: 'WAHRSCHEINLICH'
+    },
+    {
+      c: indexes.level3.get(keyLevel3(row)) || [],
+      m: 'BEGINN+START',
+      q: 'UNSICHER'
+    }
+  ];
+
+  for (const level of levels) {
+    if (level.c.length === 1) {
+      return Object.assign({}, level, { row: level.c[0], hint: '', count: 1 });
+    }
+
+    if (level.c.length > 1) {
+      return Object.assign({}, level, {
+        row: null,
+        q: 'MEHRDEUTIG',
+        hint: 'Mehrere mögliche Treffer gefunden',
+        count: level.c.length
+      });
+    }
+  }
+
+  return {
+    row: null,
+    m: '',
+    q: 'NICHT_GEFUNDEN',
+    hint: 'Kein Treffer gefunden',
+    count: 0
+  };
+}
+
+function makeTransportIds(rows) {
+  const counters = {};
+
+  rows.forEach(row => {
+    const d = dateOnlyKey(row.BEGINN_DATUM);
+    counters[d] = (counters[d] || 0) + 1;
+    row.Transport_ID = `${SYSTEM_TYPES.STAPLER}_${d}_${pad(counters[d], 6)}`;
+  });
+}
+
+function analyse() {
+  if (!state.rowsWithout.length || !state.rowsWith.length) {
+    log('Analyse nicht möglich: Bitte beide Dateigruppen laden.', 'error');
+    return;
+  }
+
+  log('Analyse gestartet');
+  state.stats = Object.assign({}, state.stats, {
+    analysed: 0,
+    sicher: 0,
+    wahrscheinlich: 0,
+    unsicher: 0,
+    mehrdeutig: 0,
+    nichtGefunden: 0
+  });
+
+  const rowsToAnalyse = state.rowsWithout.filter(row => isAfterAlreadyAnalysed(row.BEGINN_DATUM));
+  rowsToAnalyse.sort((a, b) => {
+    return (a.BEGINN_DATUM + a.Source_File + a.Source_Row).localeCompare(b.BEGINN_DATUM + b.Source_File + b.Source_Row);
+  });
+
+  makeTransportIds(rowsToAnalyse);
+
+  const indexes = buildIndexes(state.rowsWith);
+  const results = [];
+
+  for (const row of rowsToAnalyse) {
+    const match = findMatch(row, indexes);
+    const matched = match.row;
+    const out = {
+      Source_File: row.Source_File,
+      Source_Row: row.Source_Row,
+      Transport_ID: row.Transport_ID,
+      System_Typ: SYSTEM_TYPES.STAPLER,
+      BEGINN_DATUM: row.BEGINN_DATUM,
+      END_DATUM: row.END_DATUM || '',
+      ERSTER_TRANSPORT: normalizeValue(row.ERSTER_TRANSPORT),
+      LETZTER_TRANSPORT: normalizeValue(row.LETZTER_TRANSPORT),
+      ARBEITSSTUNDEN: normalizeValue(row.ARBEITSSTUNDEN),
+      START_KOORDINATE: row.START_KOORDINATE,
+      ZIEL_KOORDINATE: row.ZIEL_KOORDINATE,
+      SL_BEREICH: normalizeValue(row.SL_BEREICH),
+      SL_TERMINAL: normalizeValue(row.SL_TERMINAL),
+      SL_BENUTZER: normalizeValue(row.SL_BENUTZER),
+      LHM_NR: matched ? normalizeValue(matched.LHM_NR) : '',
+      ARTIKEL_NR: matched ? normalizeValue(matched.ARTIKEL_NR) : '',
+      Match_Methode: match.m,
+      Match_Qualität: match.q,
+      Debug_Hinweis: match.hint,
+      Kandidaten_Anzahl: match.count,
+      Matched_Source_File: matched ? matched.Source_File : '',
+      Matched_Source_Row: matched ? matched.Source_Row : ''
+    };
+
+    if (SETTINGS.includeOriginalJsonInDebug) {
+      out.Originalfelder = row.__original;
+    }
+
+    results.push(out);
+    state.stats.analysed++;
+
+    if (match.q === 'SICHER') {
+      state.stats.sicher++;
+    } else if (match.q === 'WAHRSCHEINLICH') {
+      state.stats.wahrscheinlich++;
+    } else if (match.q === 'UNSICHER') {
+      state.stats.unsicher++;
+    } else if (match.q === 'MEHRDEUTIG') {
+      state.stats.mehrdeutig++;
+    } else {
+      state.stats.nichtGefunden++;
+    }
+  }
+
+  updateStatus();
+  log('Analyse abgeschlossen', 'ok');
+  createZip(results).catch(err => log(`Fehler beim ZIP-Export: ${describeError(err)}`, 'error'));
+}
+
+function isoWeek(dtString) {
+  const d = new Date(`${dtString.slice(0, 10)}T00:00:00`);
+  d.setDate(d.getDate() + 4 - (d.getDay() || 7));
+
+  const yearStart = new Date(d.getFullYear(), 0, 1);
+  const week = Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
+  return { year: d.getFullYear(), week };
+}
+
+function groupByWeek(rows) {
+  const groups = new Map();
+
+  rows.forEach(row => {
+    const w = isoWeek(row.BEGINN_DATUM);
+    const key = `${w.year}_KW${pad(w.week)}`;
+
+    if (!groups.has(key)) {
+      groups.set(key, []);
+    }
+
+    groups.get(key).push(row);
+  });
+
+  return groups;
+}
+
+function csvEscape(v) {
+  const s = v == null ? '' : String(v);
+  return /[;"\r\n]/.test(s) ? `"${s.replaceAll('"', '""')}"` : s;
+}
+
+function toCsv(rows, cols) {
+  const lines = ['\ufeff' + cols.join(';')];
+
+  for (const row of rows) {
+    lines.push(cols.map(col => csvEscape(row[col])).join(';'));
+  }
+
+  return lines.join('\r\n');
+}
+
+async function createZip(results) {
+  const zip = new JSZip();
+  const groups = groupByWeek(results);
+
+  for (const [week, rows] of groups.entries()) {
+    zip.file(`${SETTINGS.outputPrefix}_${week}.csv`, toCsv(rows, OUTPUT_COLUMNS));
+  }
+
+  const debugRows = results.filter(row => {
+    return row.Match_Qualität === 'MEHRDEUTIG' || row.Match_Qualität === 'NICHT_GEFUNDEN';
+  });
+  const debugColumns = SETTINGS.includeOriginalJsonInDebug ? DEBUG_COLUMNS.concat(['Originalfelder']) : DEBUG_COLUMNS;
+
+  zip.file(`${SETTINGS.debugPrefix}.csv`, toCsv(debugRows, debugColumns));
+
+  const blob = await zip.generateAsync({ type: 'blob' });
+  downloadBlob(blob, `stapler_normalisierung_${zipTimestamp()}.zip`);
+  log('ZIP wurde erzeugt', 'ok');
+}
+
+function zipTimestamp() {
+  const d = new Date();
+  return `${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}_${pad(d.getHours())}${pad(d.getMinutes())}`;
+}
+
+function downloadBlob(blob, name) {
+  const a = document.createElement('a');
+
+  a.href = URL.createObjectURL(blob);
+  a.download = name;
+  document.body.appendChild(a);
+  a.click();
+
+  setTimeout(() => {
+    URL.revokeObjectURL(a.href);
+    a.remove();
+  }, 1000);
+}
+
+document.getElementById('btnOhne').addEventListener('click', () => document.getElementById('inputOhne').click());
+document.getElementById('btnMit').addEventListener('click', () => document.getElementById('inputMit').click());
+document.getElementById('btnAnalyse').addEventListener('click', analyse);
+document.getElementById('inputOhne').addEventListener('change', event => {
+  state.filesWithout = Array.from(event.target.files);
+  readSelectedFiles(state.filesWithout, 'without');
+});
+document.getElementById('inputMit').addEventListener('change', event => {
+  state.filesWith = Array.from(event.target.files);
+  readSelectedFiles(state.filesWith, 'with');
+});
+updateStatus();
+log(window.APP_SETTINGS ? 'setting.js geladen.' : 'setting.js nicht gefunden oder leer: Default-Werte werden verwendet.', 'warn');
 </script>
 </body>
 </html>
