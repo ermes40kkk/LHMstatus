@@ -74,7 +74,30 @@ const DEFAULT_SETTINGS = {
 };
 
 const SETTINGS = mergeDeep(DEFAULT_SETTINGS, window.APP_SETTINGS || {});
-const OUTPUT_COLUMNS = ['Source_File','Source_Row','Transport_ID','System_Typ','BEGINN_DATUM','END_DATUM','ERSTER_TRANSPORT','LETZTER_TRANSPORT','ARBEITSSTUNDEN','START_KOORDINATE','ZIEL_KOORDINATE','SL_BEREICH','SL_TERMINAL','SL_BENUTZER','LHM_NR','ARTIKEL_NR','Match_Methode','Match_Qualität','Debug_Hinweis','Kandidaten_Anzahl','Matched_Source_File','Matched_Source_Row'];
+const OUTPUT_COLUMNS = [
+  'START_KOORDINATE',
+  'ZIEL_KOORDINATE',
+  'SL_BEREICH',
+  'SL_TERMINAL',
+  'SL_BENUTZER',
+  'BEGINN_DATUM',
+  'END_DATUM',
+  'ERSTER_TRANSPORT',
+  'LETZTER_TRANSPORT',
+  'ARBEITSSTUNDEN',
+  'LHM_NR',
+  'ARTIKEL_NR',
+  'Source_File',
+  'Source_Row',
+  'Transport_ID',
+  'System_Typ',
+  'Match_Methode',
+  'Match_Qualität',
+  'Debug_Hinweis',
+  'Kandidaten_Anzahl',
+  'Matched_Source_File',
+  'Matched_Source_Row'
+];
 const DEBUG_COLUMNS = ['Source_File','Source_Row','BEGINN_DATUM','START_KOORDINATE','ZIEL_KOORDINATE','SL_BEREICH','SL_TERMINAL','SL_BENUTZER','Match_Methode','Match_Qualität','Debug_Hinweis','Kandidaten_Anzahl'];
 const REQUIRED_WITHOUT = ['BEGINN_DATUM','START_KOORDINATE','ZIEL_KOORDINATE','SL_TERMINAL','SL_BENUTZER'];
 const REQUIRED_WITH = ['BEGINN_DATUM','START_KOORDINATE','LHM_NR','ARTIKEL_NR'];
@@ -183,6 +206,22 @@ function normalizeValue(v) {
 
 function normalizeCoord(v) {
   return normalizeValue(v).toUpperCase();
+}
+
+function normalizeDecimal(value) {
+  if (value == null || value === '') {
+    return '';
+  }
+
+  const raw = String(value).trim();
+
+  if (!raw) {
+    return '';
+  }
+
+  const normalized = raw.replace(',', '.');
+  const n = Number(normalized);
+  return Number.isFinite(n) ? n.toFixed(2) : raw;
 }
 
 function pad(n, len = 2) {
@@ -501,11 +540,11 @@ function analyse() {
       Source_Row: row.Source_Row,
       Transport_ID: row.Transport_ID,
       System_Typ: SYSTEM_TYPES.STAPLER,
-      BEGINN_DATUM: row.BEGINN_DATUM,
-      END_DATUM: row.END_DATUM || '',
-      ERSTER_TRANSPORT: normalizeValue(row.ERSTER_TRANSPORT),
-      LETZTER_TRANSPORT: normalizeValue(row.LETZTER_TRANSPORT),
-      ARBEITSSTUNDEN: normalizeValue(row.ARBEITSSTUNDEN),
+      BEGINN_DATUM: normalizeDateTime(row.BEGINN_DATUM) || normalizeValue(row.BEGINN_DATUM),
+      END_DATUM: normalizeDateTime(row.END_DATUM) || normalizeValue(row.END_DATUM),
+      ERSTER_TRANSPORT: normalizeDateTime(row.ERSTER_TRANSPORT) || normalizeValue(row.ERSTER_TRANSPORT),
+      LETZTER_TRANSPORT: normalizeDateTime(row.LETZTER_TRANSPORT) || normalizeValue(row.LETZTER_TRANSPORT),
+      ARBEITSSTUNDEN: normalizeDecimal(row.ARBEITSSTUNDEN),
       START_KOORDINATE: row.START_KOORDINATE,
       ZIEL_KOORDINATE: row.ZIEL_KOORDINATE,
       SL_BEREICH: normalizeValue(row.SL_BEREICH),
