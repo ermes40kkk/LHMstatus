@@ -224,6 +224,31 @@ function normalizeDecimal(value) {
   return Number.isFinite(n) ? n.toFixed(2) : raw;
 }
 
+function formatDecimalDE(value, decimals = 2) {
+  if (value == null || value === '') return '';
+
+  let s = String(value).trim();
+
+  // Se arriva già con virgola, normalizza comunque
+  s = s.replace(',', '.');
+
+  const n = Number(s);
+
+  if (!Number.isFinite(n)) {
+    return String(value).trim();
+  }
+
+  return n.toFixed(decimals).replace('.', ',');
+}
+
+function formatExcelText(value) {
+  const s = normalizeValue(value);
+
+  if (!s) return '';
+
+  return `="${s.replaceAll('"', '""')}"`;
+}
+
 function pad(n, len = 2) {
   return String(n).padStart(len, '0');
 }
@@ -544,13 +569,13 @@ function analyse() {
       END_DATUM: normalizeDateTime(row.END_DATUM) || normalizeValue(row.END_DATUM),
       ERSTER_TRANSPORT: normalizeDateTime(row.ERSTER_TRANSPORT) || normalizeValue(row.ERSTER_TRANSPORT),
       LETZTER_TRANSPORT: normalizeDateTime(row.LETZTER_TRANSPORT) || normalizeValue(row.LETZTER_TRANSPORT),
-      ARBEITSSTUNDEN: normalizeDecimal(row.ARBEITSSTUNDEN),
+      ARBEITSSTUNDEN: formatDecimalDE(row.ARBEITSSTUNDEN, 2),
       START_KOORDINATE: row.START_KOORDINATE,
       ZIEL_KOORDINATE: row.ZIEL_KOORDINATE,
       SL_BEREICH: normalizeValue(row.SL_BEREICH),
       SL_TERMINAL: normalizeValue(row.SL_TERMINAL),
       SL_BENUTZER: normalizeValue(row.SL_BENUTZER),
-      LHM_NR: matched ? normalizeValue(matched.LHM_NR) : '',
+      LHM_NR: matched ? formatExcelText(matched.LHM_NR) : '',
       ARTIKEL_NR: matched ? normalizeValue(matched.ARTIKEL_NR) : '',
       Match_Methode: match.m,
       Match_Qualität: match.q,
