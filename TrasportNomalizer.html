@@ -594,12 +594,20 @@ function isoWeek(dtString) {
   return { year: d.getFullYear(), week };
 }
 
+function weekStartDate(dtString) {
+  const d = new Date(`${dtString.slice(0, 10)}T00:00:00`);
+  const day = d.getDay() || 7;
+
+  d.setDate(d.getDate() - day + 1);
+  return `${d.getFullYear()}_${pad(d.getMonth() + 1)}_${pad(d.getDate())}`;
+}
+
 function groupByWeek(rows) {
   const groups = new Map();
 
   rows.forEach(row => {
     const w = isoWeek(row.BEGINN_DATUM);
-    const key = `${w.year}_KW${pad(w.week)}`;
+    const key = `${w.year}_${weekStartDate(row.BEGINN_DATUM)}_KW${pad(w.week)}`;
 
     if (!groups.has(key)) {
       groups.set(key, []);
