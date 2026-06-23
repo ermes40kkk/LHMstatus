@@ -38,8 +38,11 @@
       <button id="btnOhne" type="button">Dateien ohne Paletten-Nr. laden</button>
       <button id="btnMit" type="button" class="secondary">Dateien mit Paletten-Nr. laden</button>
       <button id="btnAnalyse" type="button" class="success">Analyse starten</button>
+      <button id="btnLog" type="button" class="secondary">Log-Dateien laden</button>
+      <button id="btnLogKontrolle" type="button" class="success">Log-Kontrolle starten</button>
       <input id="inputOhne" type="file" accept=".xlsx,.xls,.xlsm,.csv" multiple>
       <input id="inputMit" type="file" accept=".xlsx,.xls,.xlsm,.csv" multiple>
+      <input id="inputLog" type="file" accept=".xlsx,.xls,.xlsm,.csv,.log,.txt" multiple>
     </div>
     <div class="hint">Hinweis: Die Bibliotheken SheetJS und JSZip werden per CDN geladen. Danach läuft die Verarbeitung vollständig lokal im Browser.</div>
   </section>
@@ -87,6 +90,7 @@ const OUTPUT_COLUMNS = [
   'ARBEITSSTUNDEN',
   'LHM_NR',
   'ARTIKEL_NR',
+  'AUFTRAG',
   'Source_File',
   'Source_Row',
   'Transport_ID',
@@ -96,16 +100,26 @@ const OUTPUT_COLUMNS = [
   'Debug_Hinweis',
   'Kandidaten_Anzahl',
   'Matched_Source_File',
-  'Matched_Source_Row'
+  'Matched_Source_Row',
+  'Log_Match_Methode',
+  'Log_Match_Qualität',
+  'Log_Debug_Hinweis',
+  'Log_Source_File',
+  'Log_Source_Row'
 ];
 const DEBUG_COLUMNS = ['Source_File','Source_Row','BEGINN_DATUM','START_KOORDINATE','ZIEL_KOORDINATE','SL_BEREICH','SL_TERMINAL','SL_BENUTZER','Match_Methode','Match_Qualität','Debug_Hinweis','Kandidaten_Anzahl'];
+const REQUIRED_LOG = ['ARTIKEL_NR','AUFTRAG','NEUE_MENGE','BEMERKUNG','BEWEG_TYP','START_KOORDINATE','ZIEL_KOORDINATE','ANLAGE_DATUM','ANGELEGTDURCH','LHM_NR','MHD_NEU','ALTE_MENGE','PRODUKT_MENGE','ZIEL_LHM_NR'];
 const REQUIRED_WITHOUT = ['BEGINN_DATUM','START_KOORDINATE','ZIEL_KOORDINATE','SL_TERMINAL','SL_BENUTZER'];
 const REQUIRED_WITH = ['BEGINN_DATUM','START_KOORDINATE','LHM_NR','ARTIKEL_NR'];
 const state = {
   filesWithout: [],
   filesWith: [],
+  filesLog: [],
   rowsWithout: [],
   rowsWith: [],
+  rowsLog: [],
+  logIndex: new Map(),
+  results: [],
   stats: resetStats()
 };
 
@@ -113,14 +127,19 @@ function resetStats() {
   return {
     filesWithout: 0,
     filesWith: 0,
+    filesLog: 0,
     rowsWithout: 0,
     rowsWith: 0,
+    rowsLog: 0,
     analysed: 0,
     sicher: 0,
     wahrscheinlich: 0,
     unsicher: 0,
     mehrdeutig: 0,
-    nichtGefunden: 0
+    nichtGefunden: 0,
+    logSicher: 0,
+    logMehrdeutig: 0,
+    logNichtGefunden: 0
   };
 }
 
@@ -152,14 +171,19 @@ function updateStatus() {
   const items = [
     ['Anzahl Dateien ohne Palettennummer', state.stats.filesWithout],
     ['Anzahl Dateien mit Palettennummer', state.stats.filesWith],
+    ['Anzahl Log-Dateien', state.stats.filesLog],
     ['Anzahl Zeilen ohne Palettennummer', state.stats.rowsWithout],
     ['Anzahl Zeilen mit Palettennummer', state.stats.rowsWith],
+    ['Anzahl Log-Zeilen', state.stats.rowsLog],
     ['Anzahl analysierte Zeilen', state.stats.analysed],
     ['Anzahl sichere Matches', state.stats.sicher],
     ['Anzahl wahrscheinliche Matches', state.stats.wahrscheinlich],
     ['Anzahl unsichere Matches', state.stats.unsicher],
     ['Anzahl mehrdeutige Matches', state.stats.mehrdeutig],
-    ['Anzahl nicht gefundene Matches', state.stats.nichtGefunden]
+    ['Anzahl nicht gefundene Matches', state.stats.nichtGefunden],
+    ['Anzahl sichere Log-Matches', state.stats.logSicher],
+    ['Anzahl mehrdeutige Log-Matches', state.stats.logMehrdeutig],
+    ['Anzahl nicht gefundene Log-Matches', state.stats.logNichtGefunden]
   ];
 
   document.getElementById('status').innerHTML = items
@@ -192,6 +216,19 @@ function canonicalColumnName(name) {
     lhmnummer: 'LHM_NR',
     artikelnr: 'ARTIKEL_NR',
     artikelnummer: 'ARTIKEL_NR',
+    auftragsnr: 'AUFTRAG',
+    neuemenge: 'NEUE_MENGE',
+    bemerkung: 'BEMERKUNG',
+    bewegtyp: 'BEWEG_TYP',
+    quelllagerplatz: 'START_KOORDINATE',
+    ziellagerplatz: 'ZIEL_KOORDINATE',
+    anlagdatum: 'ANLAGE_DATUM',
+    anlagedatum: 'ANLAGE_DATUM',
+    angelegtdurch: 'ANGELEGTDURCH',
+    mhdneu: 'MHD_NEU',
+    altemenge: 'ALTE_MENGE',
+    produktmenge: 'PRODUKT_MENGE',
+    ziellhmnr: 'ZIEL_LHM_NR',
     erstertransport: 'ERSTER_TRANSPORT',
     letztertransport: 'LETZTER_TRANSPORT',
     arbeitsstunden: 'ARBEITSSTUNDEN'
@@ -395,8 +432,75 @@ async function readSelectedFiles(files, kind) {
 
   state.stats.filesWithout = state.filesWithout.length;
   state.stats.filesWith = state.filesWith.length;
+  state.stats.filesLog = state.filesLog.length;
   state.stats.rowsWithout = state.rowsWithout.length;
   state.stats.rowsWith = state.rowsWith.length;
+  state.stats.rowsLog = state.rowsLog.length;
+  updateStatus();
+}
+
+async function readLogFiles(files) {
+  state.rowsLog.length = 0;
+  state.logIndex = new Map();
+
+  for (const file of files) {
+    try {
+      log(`Log-Datei wird gelesen: ${file.name}`);
+      log(`Dateigröße: ${formatFileSize(file.size)}`);
+
+      if (file.size > 30 * 1024 * 1024) {
+        log('Warnung: Diese Log-Datei ist größer als 30 MB. Die Verarbeitung kann länger dauern.', 'warn');
+      }
+
+      const data = await file.arrayBuffer();
+      const wb = XLSX.read(data, { type: 'array', cellDates: true });
+      const sheetName = wb.SheetNames[0];
+      log(`Log-Sheet wurde erkannt: ${sheetName}`, 'ok');
+
+      const sheet = wb.Sheets[sheetName];
+      const rawRows = XLSX.utils.sheet_to_json(sheet, { defval: '', raw: true });
+      log(`Log-Zeilen gelesen: ${rawRows.length}`);
+
+      if (rawRows.length > 100000) {
+        log('Warnung: Mehr als 100.000 Log-Zeilen erkannt. Die Verarbeitung kann viel Speicher benötigen.', 'warn');
+      }
+
+      const normalized = normalizeRows(rawRows, file.name);
+      const missing = missingColumns(normalized.columns, REQUIRED_LOG);
+
+      if (missing.length) {
+        log(`Fehler: ${file.name} wird übersprungen. Log-Pflichtspalten fehlen: ${missing.join(', ')}`, 'error');
+        continue;
+      }
+
+      const validRows = [];
+
+      for (const row of normalized.rows) {
+        const anlageDatum = normalizeDateTime(row.ANLAGE_DATUM);
+
+        if (!anlageDatum) {
+          continue;
+        }
+
+        row.ANLAGE_DATUM = anlageDatum;
+        row.START_KOORDINATE = normalizeCoord(row.START_KOORDINATE);
+        row.ZIEL_KOORDINATE = normalizeCoord(row.ZIEL_KOORDINATE);
+        row.AUFTRAG = normalizeValue(row.AUFTRAG);
+        validRows.push(row);
+      }
+
+      pushRowsSafe(state.rowsLog, validRows);
+
+      log(`Gültige Log-Zeilen: ${validRows.length}`, 'ok');
+      log(`Übersprungene Log-Zeilen: ${rawRows.length - validRows.length}`, 'ok');
+    } catch (err) {
+      log(`Fehler beim Lesen von ${file.name}: ${describeError(err)}`, 'error');
+    }
+  }
+
+  state.logIndex = buildLogIndex(state.rowsLog);
+  state.stats.filesLog = state.filesLog.length;
+  state.stats.rowsLog = state.rowsLog.length;
   updateStatus();
 }
 
@@ -464,6 +568,65 @@ function addIndex(map, key, row) {
 
 function joinKey(parts) {
   return parts.map(v => normalizeValue(v)).join('|');
+}
+
+function keyLog(r) {
+  return joinKey([r.ANLAGE_DATUM, r.START_KOORDINATE, r.ZIEL_KOORDINATE]);
+}
+
+function keyLogForResult(r) {
+  return joinKey([normalizeDateTime(r.END_DATUM) || normalizeValue(r.END_DATUM), r.START_KOORDINATE, r.ZIEL_KOORDINATE]);
+}
+
+function buildLogIndex(rows) {
+  const indexLog = new Map();
+
+  for (const row of rows) {
+    addIndex(indexLog, keyLog(row), row);
+  }
+
+  log(`Log-Index erstellt (${indexLog.size} Schlüssel)`, 'ok');
+  return indexLog;
+}
+
+function emptyLogMatchFields(out) {
+  out.AUFTRAG = '';
+  out.Log_Match_Methode = '';
+  out.Log_Match_Qualität = '';
+  out.Log_Debug_Hinweis = '';
+  out.Log_Source_File = '';
+  out.Log_Source_Row = '';
+}
+
+function applyLogMatch(result, indexLog) {
+  const hits = indexLog.get(keyLogForResult(result)) || [];
+
+  result.AUFTRAG = '';
+  result.Log_Match_Methode = '';
+  result.Log_Match_Qualität = '';
+  result.Log_Debug_Hinweis = '';
+  result.Log_Source_File = '';
+  result.Log_Source_Row = '';
+
+  if (hits.length === 1) {
+    result.AUFTRAG = normalizeValue(hits[0].AUFTRAG);
+    result.Log_Match_Methode = 'ANLAGE_DATUM+START+ZIEL';
+    result.Log_Match_Qualität = 'SICHER';
+    result.Log_Source_File = hits[0].Source_File;
+    result.Log_Source_Row = hits[0].Source_Row;
+    return result.Log_Match_Qualität;
+  }
+
+  if (hits.length > 1) {
+    result.Log_Match_Methode = 'ANLAGE_DATUM+START+ZIEL';
+    result.Log_Match_Qualität = 'MEHRDEUTIG';
+    result.Log_Debug_Hinweis = 'Mehrere Log-Treffer gefunden';
+    return result.Log_Match_Qualität;
+  }
+
+  result.Log_Match_Qualität = 'NICHT_GEFUNDEN';
+  result.Log_Debug_Hinweis = 'Kein Log-Treffer gefunden';
+  return result.Log_Match_Qualität;
 }
 
 function keyLevel1(r) {
@@ -544,8 +707,12 @@ function analyse() {
     wahrscheinlich: 0,
     unsicher: 0,
     mehrdeutig: 0,
-    nichtGefunden: 0
+    nichtGefunden: 0,
+    logSicher: 0,
+    logMehrdeutig: 0,
+    logNichtGefunden: 0
   });
+  state.results = [];
 
   const rowsToAnalyse = state.rowsWithout.filter(row => isAfterAlreadyAnalysed(row.BEGINN_DATUM));
   rowsToAnalyse.sort((a, b) => {
@@ -585,6 +752,8 @@ function analyse() {
       Matched_Source_Row: matched ? matched.Source_Row : ''
     };
 
+    emptyLogMatchFields(out);
+
     if (SETTINGS.includeOriginalJsonInDebug) {
       out.Originalfelder = row.__original;
     }
@@ -607,7 +776,41 @@ function analyse() {
 
   updateStatus();
   log('Analyse abgeschlossen', 'ok');
+  state.results = results;
   createZip(results).catch(err => log(`Fehler beim ZIP-Export: ${describeError(err)}`, 'error'));
+}
+
+function logKontrolleStarten() {
+  if (!state.results.length) {
+    log('Log-Kontrolle nicht möglich: Bitte zuerst die Analyse starten.', 'error');
+    return;
+  }
+
+  if (!state.rowsLog.length) {
+    log('Log-Kontrolle nicht möglich: Bitte zuerst Log-Dateien laden.', 'error');
+    return;
+  }
+
+  log('Log-Kontrolle gestartet');
+  state.stats.logSicher = 0;
+  state.stats.logMehrdeutig = 0;
+  state.stats.logNichtGefunden = 0;
+
+  for (const result of state.results) {
+    const quality = applyLogMatch(result, state.logIndex);
+
+    if (quality === 'SICHER') {
+      state.stats.logSicher++;
+    } else if (quality === 'MEHRDEUTIG') {
+      state.stats.logMehrdeutig++;
+    } else {
+      state.stats.logNichtGefunden++;
+    }
+  }
+
+  updateStatus();
+  log('Log-Kontrolle abgeschlossen', 'ok');
+  createZip(state.results).catch(err => log(`Fehler beim ZIP-Export: ${describeError(err)}`, 'error'));
 }
 
 function isoWeek(dtString) {
@@ -701,6 +904,8 @@ function downloadBlob(blob, name) {
 document.getElementById('btnOhne').addEventListener('click', () => document.getElementById('inputOhne').click());
 document.getElementById('btnMit').addEventListener('click', () => document.getElementById('inputMit').click());
 document.getElementById('btnAnalyse').addEventListener('click', analyse);
+document.getElementById('btnLog').addEventListener('click', () => document.getElementById('inputLog').click());
+document.getElementById('btnLogKontrolle').addEventListener('click', logKontrolleStarten);
 document.getElementById('inputOhne').addEventListener('change', event => {
   state.filesWithout = Array.from(event.target.files);
   readSelectedFiles(state.filesWithout, 'without');
@@ -708,6 +913,10 @@ document.getElementById('inputOhne').addEventListener('change', event => {
 document.getElementById('inputMit').addEventListener('change', event => {
   state.filesWith = Array.from(event.target.files);
   readSelectedFiles(state.filesWith, 'with');
+});
+document.getElementById('inputLog').addEventListener('change', event => {
+  state.filesLog = Array.from(event.target.files);
+  readLogFiles(state.filesLog);
 });
 updateStatus();
 log(window.APP_SETTINGS ? 'setting.js geladen.' : 'setting.js nicht gefunden oder leer: Default-Werte werden verwendet.', 'warn');
