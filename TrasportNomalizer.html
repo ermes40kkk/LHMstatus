@@ -55,6 +55,7 @@
 // Zentrale Konstanten für spätere Erweiterungen um KOMMISSIONIERER und SG.
 const SYSTEM_TYPES = {
   STAPLER: 'STAPLER',
+  LOG: 'LOG',
   KOMMISSIONIERER: 'KOMMISSIONIERER',
   SG: 'SG'
 };
@@ -629,6 +630,45 @@ function applyLogMatch(result, indexLog) {
   return result.Log_Match_Qualität;
 }
 
+function createDirectLogResults(rowsLog) {
+  const results = [];
+
+  for (const row of rowsLog) {
+    results.push({
+      START_KOORDINATE: row.START_KOORDINATE,
+      ZIEL_KOORDINATE: row.ZIEL_KOORDINATE,
+      SL_BEREICH: '',
+      SL_TERMINAL: '',
+      SL_BENUTZER: normalizeValue(row.ANGELEGTDURCH),
+      BEGINN_DATUM: '',
+      END_DATUM: normalizeDateTime(row.ANLAGE_DATUM) || normalizeValue(row.ANLAGE_DATUM),
+      ERSTER_TRANSPORT: '',
+      LETZTER_TRANSPORT: '',
+      ARBEITSSTUNDEN: formatDecimalDE(row.ARBEITSSTUNDEN, 2),
+      LHM_NR: formatExcelText(row.LHM_NR),
+      ARTIKEL_NR: normalizeValue(row.ARTIKEL_NR),
+      AUFTRAG: normalizeValue(row.AUFTRAG),
+      Source_File: row.Source_File,
+      Source_Row: row.Source_Row,
+      Transport_ID: '',
+      System_Typ: SYSTEM_TYPES.LOG,
+      Match_Methode: 'LOG_DIREKT',
+      Match_Qualität: 'SICHER',
+      Debug_Hinweis: 'Aus Log-Datei direkt erzeugt',
+      Kandidaten_Anzahl: 1,
+      Matched_Source_File: '',
+      Matched_Source_Row: '',
+      Log_Match_Methode: 'LOG_DIREKT',
+      Log_Match_Qualität: 'SICHER',
+      Log_Debug_Hinweis: 'Direkter Log-Datensatz',
+      Log_Source_File: row.Source_File,
+      Log_Source_Row: row.Source_Row
+    });
+  }
+
+  return results;
+}
+
 function keyLevel1(r) {
   return joinKey([r.BEGINN_DATUM, r.START_KOORDINATE, r.ZIEL_KOORDINATE, r.SL_TERMINAL, r.SL_BENUTZER]);
 }
@@ -781,11 +821,6 @@ function analyse() {
 }
 
 function logKontrolleStarten() {
-  if (!state.results.length) {
-    log('Log-Kontrolle nicht möglich: Bitte zuerst die Analyse starten.', 'error');
-    return;
-  }
-
   if (!state.rowsLog.length) {
     log('Log-Kontrolle nicht möglich: Bitte zuerst Log-Dateien laden.', 'error');
     return;
@@ -795,6 +830,21 @@ function logKontrolleStarten() {
   state.stats.logSicher = 0;
   state.stats.logMehrdeutig = 0;
   state.stats.logNichtGefunden = 0;
+
+  if (!state.results.length) {
+    state.results = createDirectLogResults(state.rowsLog);
+    state.stats.analysed = state.results.length;
+    state.stats.sicher = state.results.length;
+    state.stats.wahrscheinlich = 0;
+    state.stats.unsicher = 0;
+    state.stats.mehrdeutig = 0;
+    state.stats.nichtGefunden = 0;
+    state.stats.logSicher = state.results.length;
+    log('Log-Kontrolle im direkten Log-Modus ausgeführt', 'ok');
+    updateStatus();
+    createZip(state.results).catch(err => log(`Fehler beim ZIP-Export: ${describeError(err)}`, 'error'));
+    return;
+  }
 
   for (const result of state.results) {
     const quality = applyLogMatch(result, state.logIndex);
@@ -834,8 +884,13 @@ function groupByWeek(rows) {
   const groups = new Map();
 
   rows.forEach(row => {
-    const w = isoWeek(row.BEGINN_DATUM);
-    const key = `${w.year}_${weekStartDate(row.BEGINN_DATUM)}_KW${pad(w.week)}`;
+    const dateForWeek = row.BEGINN_DATUM || row.END_DATUM;
+    let key = 'OHNE_DATUM';
+
+    if (dateForWeek) {
+      const w = isoWeek(dateForWeek);
+      key = `${w.year}_${weekStartDate(dateForWeek)}_KW${pad(w.week)}`;
+    }
 
     if (!groups.has(key)) {
       groups.set(key, []);
