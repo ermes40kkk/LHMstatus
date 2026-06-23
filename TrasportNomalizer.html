@@ -615,7 +615,12 @@ function emptyLogMatchFields(out) {
   out.Log_Source_Row = '';
 }
 
-function addLogFieldsFromHit(result, hit) {
+function addLogFieldsFromHit(result, hit, options = {}) {
+  if (options.fillPalletAndArticle) {
+    result.LHM_NR = formatExcelText(hit.LHM_NR);
+    result.ARTIKEL_NR = normalizeValue(hit.ARTIKEL_NR);
+  }
+
   result.AUFTRAG = normalizeValue(hit.AUFTRAG);
   result.NEUE_MENGE = formatDecimalDE(hit.NEUE_MENGE, 2);
   result.ALTE_MENGE = formatDecimalDE(hit.ALTE_MENGE, 2);
@@ -625,6 +630,52 @@ function addLogFieldsFromHit(result, hit) {
   result.ANGELEGTDURCH = normalizeValue(hit.ANGELEGTDURCH);
   result.MHD_NEU = normalizeDateTime(hit.MHD_NEU) || normalizeValue(hit.MHD_NEU);
   result.ZIEL_LHM_NR = formatExcelText(hit.ZIEL_LHM_NR);
+}
+
+function createBaseResultFromFirstFile(row) {
+  return {
+    Source_File: row.Source_File,
+    Source_Row: row.Source_Row,
+    Transport_ID: row.Transport_ID || '',
+    System_Typ: SYSTEM_TYPES.STAPLER,
+
+    START_KOORDINATE: row.START_KOORDINATE,
+    ZIEL_KOORDINATE: row.ZIEL_KOORDINATE,
+    SL_BEREICH: normalizeValue(row.SL_BEREICH),
+    SL_TERMINAL: normalizeValue(row.SL_TERMINAL),
+    SL_BENUTZER: normalizeValue(row.SL_BENUTZER),
+
+    BEGINN_DATUM: normalizeDateTime(row.BEGINN_DATUM) || normalizeValue(row.BEGINN_DATUM),
+    END_DATUM: normalizeDateTime(row.END_DATUM) || normalizeValue(row.END_DATUM),
+    ERSTER_TRANSPORT: normalizeDateTime(row.ERSTER_TRANSPORT) || normalizeValue(row.ERSTER_TRANSPORT),
+    LETZTER_TRANSPORT: normalizeDateTime(row.LETZTER_TRANSPORT) || normalizeValue(row.LETZTER_TRANSPORT),
+    ARBEITSSTUNDEN: formatDecimalDE(row.ARBEITSSTUNDEN, 2),
+
+    LHM_NR: '',
+    ARTIKEL_NR: '',
+    AUFTRAG: '',
+    NEUE_MENGE: '',
+    ALTE_MENGE: '',
+    PRODUKT_MENGE: '',
+    BEMERKUNG: '',
+    BEWEG_TYP: '',
+    ANGELEGTDURCH: '',
+    MHD_NEU: '',
+    ZIEL_LHM_NR: '',
+
+    Match_Methode: '',
+    Match_Qualität: '',
+    Debug_Hinweis: '',
+    Kandidaten_Anzahl: 0,
+    Matched_Source_File: '',
+    Matched_Source_Row: '',
+
+    Log_Match_Methode: '',
+    Log_Match_Qualität: '',
+    Log_Debug_Hinweis: '',
+    Log_Source_File: '',
+    Log_Source_Row: ''
+  };
 }
 
 function applyLogMatch(result, indexLog) {
@@ -653,21 +704,80 @@ function applyLogMatch(result, indexLog) {
   return result.Log_Match_Qualität;
 }
 
+function createLogResultsFromFirstFile(rowsWithout, indexLog) {
+  const rowsToAnalyse = rowsWithout.filter(row => isAfterAlreadyAnalysed(row.BEGINN_DATUM));
+
+  rowsToAnalyse.sort((a, b) => {
+    return (a.BEGINN_DATUM + a.Source_File + a.Source_Row)
+      .localeCompare(b.BEGINN_DATUM + b.Source_File + b.Source_Row);
+  });
+
+  makeTransportIds(rowsToAnalyse);
+
+  const results = [];
+
+  for (const row of rowsToAnalyse) {
+    const out = createBaseResultFromFirstFile(row);
+    const hits = indexLog.get(keyLogForResult(out)) || [];
+
+    if (hits.length === 1) {
+      addLogFieldsFromHit(out, hits[0], { fillPalletAndArticle: true });
+
+      out.Match_Methode = 'LOG_ANLAGE_DATUM+START+ZIEL';
+      out.Match_Qualität = 'SICHER';
+      out.Debug_Hinweis = 'Aus erster Datei mit Log-Datei ergänzt';
+      out.Kandidaten_Anzahl = 1;
+      out.Matched_Source_File = hits[0].Source_File;
+      out.Matched_Source_Row = hits[0].Source_Row;
+
+      out.Log_Match_Methode = 'ANLAGE_DATUM+START+ZIEL';
+      out.Log_Match_Qualität = 'SICHER';
+      out.Log_Debug_Hinweis = 'Log-Treffer gefunden';
+      out.Log_Source_File = hits[0].Source_File;
+      out.Log_Source_Row = hits[0].Source_Row;
+    } else if (hits.length > 1) {
+      out.Match_Methode = 'LOG_ANLAGE_DATUM+START+ZIEL';
+      out.Match_Qualität = 'MEHRDEUTIG';
+      out.Debug_Hinweis = 'Mehrere Log-Treffer gefunden';
+      out.Kandidaten_Anzahl = hits.length;
+
+      out.Log_Match_Methode = 'ANLAGE_DATUM+START+ZIEL';
+      out.Log_Match_Qualität = 'MEHRDEUTIG';
+      out.Log_Debug_Hinweis = 'Mehrere Log-Treffer gefunden';
+    } else {
+      out.Match_Methode = 'LOG_ANLAGE_DATUM+START+ZIEL';
+      out.Match_Qualität = 'NICHT_GEFUNDEN';
+      out.Debug_Hinweis = 'Kein Log-Treffer gefunden';
+      out.Kandidaten_Anzahl = 0;
+
+      out.Log_Match_Methode = 'ANLAGE_DATUM+START+ZIEL';
+      out.Log_Match_Qualität = 'NICHT_GEFUNDEN';
+      out.Log_Debug_Hinweis = 'Kein Log-Treffer gefunden';
+    }
+
+    results.push(out);
+  }
+
+  return results;
+}
+///NOT VALID ANYMORE , IST HERE JUST FOR FUTURE USE
 function createDirectLogResults(rowsLog) {
   const results = [];
 
   for (const row of rowsLog) {
+    const anlageDatum = normalizeDateTime(row.ANLAGE_DATUM) || normalizeValue(row.ANLAGE_DATUM);
+
     results.push({
       START_KOORDINATE: row.START_KOORDINATE,
       ZIEL_KOORDINATE: row.ZIEL_KOORDINATE,
       SL_BEREICH: normalizeValue(row.BEWEG_TYP),
       SL_TERMINAL: normalizeValue(row.BEMERKUNG),
       SL_BENUTZER: normalizeValue(row.ANGELEGTDURCH),
-      BEGINN_DATUM: normalizeDateTime(row.ANLAGE_DATUM) || normalizeValue(row.ANLAGE_DATUM),
-      END_DATUM: normalizeDateTime(row.ANLAGE_DATUM) || normalizeValue(row.ANLAGE_DATUM),
-      ERSTER_TRANSPORT: normalizeDateTime(row.ANLAGE_DATUM) || normalizeValue(row.ANLAGE_DATUM),
-      LETZTER_TRANSPORT: normalizeDateTime(row.ANLAGE_DATUM) || normalizeValue(row.ANLAGE_DATUM),
-      ARBEITSSTUNDEN: formatDecimalDE(row.ARBEITSSTUNDEN, 2),
+      BEGINN_DATUM: anlageDatum,
+      END_DATUM: anlageDatum,
+      ERSTER_TRANSPORT: anlageDatum,
+      LETZTER_TRANSPORT: anlageDatum,
+      ARBEITSSTUNDEN: '',
       LHM_NR: formatExcelText(row.LHM_NR),
       ARTIKEL_NR: normalizeValue(row.ARTIKEL_NR),
       AUFTRAG: normalizeValue(row.AUFTRAG),
@@ -691,7 +801,7 @@ function createDirectLogResults(rowsLog) {
       Matched_Source_Row: '',
       Log_Match_Methode: 'LOG_DIREKT',
       Log_Match_Qualität: 'SICHER',
-      Log_Debug_Hinweis: 'Direkter Log-Datensatz',
+      Log_Debug_Hinweis: 'Direkter Log-Datensatz ohne erste Datei',
       Log_Source_File: row.Source_File,
       Log_Source_Row: row.Source_Row
     });
@@ -863,6 +973,40 @@ function analyse() {
   createZip(results).catch(err => log(`Fehler beim ZIP-Export: ${describeError(err)}`, 'error'));
 }
 
+function recalculateLogOnlyStatsFromResults(results) {
+  state.stats.analysed = results.length;
+  state.stats.sicher = 0;
+  state.stats.wahrscheinlich = 0;
+  state.stats.unsicher = 0;
+  state.stats.mehrdeutig = 0;
+  state.stats.nichtGefunden = 0;
+  state.stats.logSicher = 0;
+  state.stats.logMehrdeutig = 0;
+  state.stats.logNichtGefunden = 0;
+
+  for (const result of results) {
+    if (result.Match_Qualität === 'SICHER') {
+      state.stats.sicher++;
+    } else if (result.Match_Qualität === 'WAHRSCHEINLICH') {
+      state.stats.wahrscheinlich++;
+    } else if (result.Match_Qualität === 'UNSICHER') {
+      state.stats.unsicher++;
+    } else if (result.Match_Qualität === 'MEHRDEUTIG') {
+      state.stats.mehrdeutig++;
+    } else {
+      state.stats.nichtGefunden++;
+    }
+
+    if (result.Log_Match_Qualität === 'SICHER') {
+      state.stats.logSicher++;
+    } else if (result.Log_Match_Qualität === 'MEHRDEUTIG') {
+      state.stats.logMehrdeutig++;
+    } else {
+      state.stats.logNichtGefunden++;
+    }
+  }
+}
+
 function logKontrolleStarten() {
   if (!state.rowsLog.length) {
     log('Log-Kontrolle nicht möglich: Bitte zuerst Log-Dateien laden.', 'error');
@@ -875,15 +1019,15 @@ function logKontrolleStarten() {
   state.stats.logNichtGefunden = 0;
 
   if (!state.results.length) {
-    state.results = createDirectLogResults(state.rowsLog);
-    state.stats.analysed = state.results.length;
-    state.stats.sicher = state.results.length;
-    state.stats.wahrscheinlich = 0;
-    state.stats.unsicher = 0;
-    state.stats.mehrdeutig = 0;
-    state.stats.nichtGefunden = 0;
-    state.stats.logSicher = state.results.length;
-    log('Log-Kontrolle im direkten Log-Modus ausgeführt', 'ok');
+    if (!state.rowsWithout.length) {
+      log('Log-Kontrolle nicht möglich: Bitte zuerst Dateien ohne Paletten-Nr. laden.', 'error');
+      return;
+    }
+
+    state.results = createLogResultsFromFirstFile(state.rowsWithout, state.logIndex);
+    recalculateLogOnlyStatsFromResults(state.results);
+    log('Log-Kontrolle mit erster Datei und Log-Datei ausgeführt', 'ok');
+
     updateStatus();
     createZip(state.results).catch(err => log(`Fehler beim ZIP-Export: ${describeError(err)}`, 'error'));
     return;
