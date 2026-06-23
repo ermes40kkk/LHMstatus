@@ -600,6 +600,14 @@ function buildLogIndex(rows) {
 
 function emptyLogMatchFields(out) {
   out.AUFTRAG = '';
+  out.NEUE_MENGE = '';
+  out.ALTE_MENGE = '';
+  out.PRODUKT_MENGE = '';
+  out.BEMERKUNG = '';
+  out.BEWEG_TYP = '';
+  out.ANGELEGTDURCH = '';
+  out.MHD_NEU = '';
+  out.ZIEL_LHM_NR = '';
   out.Log_Match_Methode = '';
   out.Log_Match_Qualität = '';
   out.Log_Debug_Hinweis = '';
@@ -607,18 +615,25 @@ function emptyLogMatchFields(out) {
   out.Log_Source_Row = '';
 }
 
+function addLogFieldsFromHit(result, hit) {
+  result.AUFTRAG = normalizeValue(hit.AUFTRAG);
+  result.NEUE_MENGE = formatDecimalDE(hit.NEUE_MENGE, 2);
+  result.ALTE_MENGE = formatDecimalDE(hit.ALTE_MENGE, 2);
+  result.PRODUKT_MENGE = formatDecimalDE(hit.PRODUKT_MENGE, 2);
+  result.BEMERKUNG = normalizeValue(hit.BEMERKUNG);
+  result.BEWEG_TYP = normalizeValue(hit.BEWEG_TYP);
+  result.ANGELEGTDURCH = normalizeValue(hit.ANGELEGTDURCH);
+  result.MHD_NEU = normalizeDateTime(hit.MHD_NEU) || normalizeValue(hit.MHD_NEU);
+  result.ZIEL_LHM_NR = formatExcelText(hit.ZIEL_LHM_NR);
+}
+
 function applyLogMatch(result, indexLog) {
   const hits = indexLog.get(keyLogForResult(result)) || [];
 
-  result.AUFTRAG = '';
-  result.Log_Match_Methode = '';
-  result.Log_Match_Qualität = '';
-  result.Log_Debug_Hinweis = '';
-  result.Log_Source_File = '';
-  result.Log_Source_Row = '';
+  emptyLogMatchFields(result);
 
   if (hits.length === 1) {
-    result.AUFTRAG = normalizeValue(hits[0].AUFTRAG);
+    addLogFieldsFromHit(result, hits[0]);
     result.Log_Match_Methode = 'ANLAGE_DATUM+START+ZIEL';
     result.Log_Match_Qualität = 'SICHER';
     result.Log_Source_File = hits[0].Source_File;
@@ -808,7 +823,19 @@ function analyse() {
       Matched_Source_Row: matched ? matched.Source_Row : ''
     };
 
-    emptyLogMatchFields(out);
+    if (state.logIndex.size) {
+      const logQuality = applyLogMatch(out, state.logIndex);
+
+      if (logQuality === 'SICHER') {
+        state.stats.logSicher++;
+      } else if (logQuality === 'MEHRDEUTIG') {
+        state.stats.logMehrdeutig++;
+      } else {
+        state.stats.logNichtGefunden++;
+      }
+    } else {
+      emptyLogMatchFields(out);
+    }
 
     if (SETTINGS.includeOriginalJsonInDebug) {
       out.Originalfelder = row.__original;
